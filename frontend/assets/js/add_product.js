@@ -20,6 +20,12 @@ async function fetchCategories() {
   return data;
 }
 
+async function fetchBrands() {
+  const response = await fetch("/api/brands");
+  const { data } = await response.json();
+  return data;
+}
+
 // Load categories dynamically
 async function loadCategories() {
   const categorySelect = document.querySelector("#category");
@@ -43,6 +49,29 @@ async function loadCategories() {
   }
 }
 
+async function loadBrands() {
+  const brandSelect = document.querySelector("#brand");
+  if (!brandSelect) {
+    console.error("Error: #category not found");
+    return;
+  }
+  try {
+    const brands = await fetchBrands();
+    brandSelect.innerHTML = '<option value="">Select brand</option>';
+    brands.forEach(brand => {
+      const option = document.createElement("option");
+      option.value = brand._id;
+      option.textContent = brand.name;
+      brandSelect.appendChild(option);
+    });
+    gsap.from(brandSelect, { opacity: 0, duration: 0.5, ease: "power3.out" });
+  } catch (error) {
+    console.error("Error fetching brands:", error);
+    categorySelect.innerHTML = '<option value="">Error loading brands</option>';
+  }
+}
+
+
 function handleMainImageUpload() {
   const mainImagePreview = document.querySelector("#main-image-preview");
   const mainImageInput = document.querySelector("#mainImage");
@@ -53,6 +82,7 @@ function handleMainImageUpload() {
   }
   mainImageInput.addEventListener("change", (e) => {
 
+    mainImagePreview.innerHTML = "";
     const file = e.target.files[0]
 
     if (!file.type.match("image/(png|jpeg)")) {
@@ -264,6 +294,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Load categories
   loadCategories();
 
+  loadBrands();
 
   handleMainImageUpload();
 
@@ -279,6 +310,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const description = document.querySelector("#description");
     const price = document.querySelector("#price");
     const category = document.querySelector("#category");
+    const brand = document.querySelector("#brand");
     const stock = document.querySelector("#stock");
     const mainImage = document.querySelector("#mainImage");
     const images = document.querySelector("#image");
@@ -337,6 +369,18 @@ document.addEventListener("DOMContentLoaded", () => {
         error.textContent = "Please select a category";
         error.classList.add("active");
         category.classList.add("invalid");
+        gsap.from(error, { opacity: 0, y: 5, duration: 0.3, ease: "power3.out" });
+      }
+      isValid = false;
+    }
+
+    // Validate brand
+    if (!brand || !brand.value) {
+      const error = brand?.nextElementSibling;
+      if (error) {
+        error.textContent = "Please select a category";
+        error.classList.add("active");
+        brand.classList.add("invalid");
         gsap.from(error, { opacity: 0, y: 5, duration: 0.3, ease: "power3.out" });
       }
       isValid = false;
@@ -426,6 +470,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const description = document.querySelector("#description")?.value;
         const price = document.querySelector("#price")?.value;
         const category = document.querySelector("#category")?.value;
+        const brand = document.querySelector("#brand")?.value;
         const stock = document.querySelector("#stock")?.value;
         const mainImage = document.querySelector("#mainImage")?.files[0];
         const thumbnails = document.querySelector("#image")?.files;
@@ -439,6 +484,7 @@ document.addEventListener("DOMContentLoaded", () => {
         formData.append("description", description);
         formData.append("price", price);
         formData.append("category", category);
+        formData.append("brand", brand);
         formData.append("stock", stock);
         formData.append("mainImage", mainImage);
         for (let i = 0; i < thumbnails.length; i++) {

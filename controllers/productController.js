@@ -124,6 +124,7 @@ exports.add_product = async (req, res) => {
       price,
       category,
       stock,
+      brand,
       productDetails,
       keyFeatures,
       whatsInBox
@@ -164,6 +165,7 @@ exports.add_product = async (req, res) => {
       description,
       price: parseFloat(price),
       category,
+      brand,
       stock: parseInt(stock),
       keyFeatures: featuresArray,
       whatsInBox: whatsInBoxArray,

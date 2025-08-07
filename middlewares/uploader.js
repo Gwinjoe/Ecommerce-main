@@ -1,5 +1,7 @@
 require("dotenv").config();
 const cloudinary = require("cloudinary").v2;
+const pLimit = require("p-limit")
+const fs = require("fs")
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -23,15 +25,20 @@ const uploader = async (file) => {
       }
     ]
   });
+  fs.unlink(file);
   return { url, publicId: results.public_id };
 }
 
 async function uploadMultiple(documentPaths) {
-  const uploadPromises = documentPaths.map(async (path) => {
-    await cloudinary.uploader.upload(path)
+  const limit = pLimit(10);
+  const uploadPromises = documentPaths.map((path) => {
+    limit(() => {
+      cloudinary.uploader.upload(path)
+    })
+    fs.unlink(path)
   });
   const results = await Promise.all(uploadPromises);
-  // This array will contain the upload results for each document
+  console.log(results);
   const finalResults = results.map((result) => {
     const url = cloudinary.url(result.public_id, {
       transformation: [

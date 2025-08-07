@@ -21,9 +21,9 @@ exports.signup = async (req, res) => {
       password: hashedPassword,
     })
 
-    const result = await newUser.save();
-    res.status(201).json({ success: true, message: "Your Account has been created successfuly", result });
-    res.redirect("/login");
+    await newUser.save();
+    //res.json({ success: true, message: "Your Account has been created successfuly", result });
+    return res.status(201).redirect("/login");
   } catch (error) {
     console.log(error)
   }

@@ -69,7 +69,6 @@ document.addEventListener("DOMContentLoaded", () => {
           onComplete: () => {
             gsap.to(loginBtn, { scale: 1, duration: 0.1 });
             console.log(`Login attempt: Email=${email}, RememberMe=${rememberMe}`);
-            alert("Login successful (placeholder)");
             trackEvent("login_submit", { email: email, remember_me: rememberMe });
           }
         });

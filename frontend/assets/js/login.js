@@ -37,8 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // Form validation
-  form.addEventListener("submit", (e) => {
-    e.preventDefault();
+  loginBtn.addEventListener("click", () => {
     const inputs = form.querySelectorAll("input[required]");
     const email = document.querySelector("#email").value;
     const password = document.querySelector("#password").value;
@@ -62,24 +61,22 @@ document.addEventListener("DOMContentLoaded", () => {
         duration: 0.1,
         yoyo: true,
         repeat: 1,
-        onComplete: async () => {
+        onComplete: () => {
           console.log({ email, password })
-          const response = await fetch("/api/login", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ email: email, password: password })
-          });
-          const { success, message } = await response.json();
-
-          if (success) {
-            showStatusModal("success", message);
-          } else {
-            showStatusModal("failed", message);
-          }
-
-          alert("Login successful!"); // Placeholder
+          // const response = await fetch("/api/login", {
+          //   method: "POST",
+          //   headers: {
+          //     "Content-Type": "application/json"
+          //   },
+          //   body: JSON.stringify({ email: email, password: password })
+          // });
+          // const { success, message } = await response.json();
+          //
+          // if (success) {
+          //   showStatusModal("success", message);
+          // } else {
+          //   showStatusModal("failed", message);
+          // }
         }
       });
     } else {
