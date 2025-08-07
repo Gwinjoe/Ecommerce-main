@@ -1,7 +1,6 @@
 require("dotenv").config();
 const cloudinary = require("cloudinary").v2;
-const pLimit = require("p-limit")
-const fs = require("fs")
+const pLimit = require("p-limit");
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -25,37 +24,39 @@ const uploader = async (file) => {
       }
     ]
   });
-  fs.unlink(file);
   return { url, publicId: results.public_id };
 }
 
 async function uploadMultiple(documentPaths) {
   const limit = pLimit(10);
-  const uploadPromises = documentPaths.map((path) => {
-    limit(() => {
-      cloudinary.uploader.upload(path)
-    })
-    fs.unlink(path)
-  });
+  const uploadPromises = documentPaths.map((path) =>
+    limit(() => cloudinary.uploader.upload(path).catch(error => {
+      console.error(`Upload failed for ${path}:`, error);
+      return null;
+    }))
+  );
+
   const results = await Promise.all(uploadPromises);
-  console.log(results);
-  const finalResults = results.map((result) => {
-    const url = cloudinary.url(result.public_id, {
-      transformation: [
-        {
-          quality: 'auto',
-          fetch_format: 'auto'
-        },
-        {
-          width: 500,
-          height: 500,
-          crop: 'fill',
-          gravity: 'auto'
-        }
-      ]
-    })
-    return { url, publicId: result.public_id };
-  });
+
+  const finalResults = results
+    .filter(result => result !== null)
+    .map((result) => {
+      const url = cloudinary.url(result.public_id, {
+        transformation: [
+          {
+            quality: 'auto',
+            fetch_format: 'auto'
+          },
+          {
+            width: 500,
+            height: 500,
+            crop: 'fill',
+            gravity: 'auto'
+          }
+        ]
+      })
+      return { url, publicId: result.public_id };
+    });
   return finalResults;
 }
 
