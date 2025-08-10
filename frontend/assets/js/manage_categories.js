@@ -1,6 +1,7 @@
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import showStatusModal from "./modal.js";
+import { loadingIndicator } from "./loader.js";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -263,6 +264,7 @@ function closeModal() {
 // Confirm Delete
 document.querySelector(".confirm-delete").addEventListener("click", async (e) => {
   try {
+    loadingIndicator.show("Deleting...")
     const id = e.target.getAttribute("data-id");
     const index = categories.findIndex(c => c._id == id);
     if (index !== -1) {
@@ -270,8 +272,10 @@ document.querySelector(".confirm-delete").addEventListener("click", async (e) =>
       const response = await fetch(`/api/delete_category/${id}`, { method: "DELETE" });
       const result = await response.json();
       if (result.success) {
+        loadingIndicator.hide();
         showStatusModal("success");
       } else {
+        loadingIndicator.hide();
         showStatusModal("failed");
       }
       console.log(`Category ${id} deleted`); // Replace with AJAX call to delete_category.php

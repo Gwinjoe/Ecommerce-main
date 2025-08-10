@@ -28,6 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
           console.log("Logout confirmed");
           trackEvent("confirm_logout");
           // Redirect to login page (placeholder)
+          window.location.href = "/admin/login"
         }
       });
     });

@@ -5,25 +5,24 @@ const socket = io();
 
 gsap.registerPlugin(ScrollTrigger);
 
+let chats = []
+// Sample chat data (replace with actual data from backend)
 async function getChatThreads() {
   const response = await fetch("/api/admin_chats_thread");
-  const { results } = await response.json();
-  return results;
-
+  const { existingChat } = await response.json();
+  return existingChat;
 }
 
-let chats = []
-//Sample chat data (replace with actual data from backend)
 window.addEventListener("DOMContentLoaded", async () => {
-  // Initial Render
   const results = await getChatThreads();
   chats = results;
   renderChatThreads(results);
   if (chats.length > 0) {
     document.querySelector(".chat-thread").classList.add("active");
-    renderMessages(results[0]._id);
+    renderMessages();
   }
-
+  const rooms = results.map((result) => result._id);
+  socket.emit("enterAllRooms", rooms)
 })
 
 const chats2 = [
@@ -69,6 +68,8 @@ const newChatBtn = document.querySelector(".new-chat-btn");
 const chatSearch = document.querySelector(".chat-search input");
 const chatSidebar = document.querySelector(".chat-sidebar");
 const chatContact = document.querySelector(".chat-contact");
+const chatInput = document.querySelector(".chat-input");
+const chatHeader = document.querySelector(".chat-header");
 
 // Set current year in footer
 yearSpan.textContent = new Date().getFullYear();
@@ -222,7 +223,7 @@ async function renderChatThreads(data) {
   try {
     chatList.innerHTML = "";
     const results = data ? data : await getChatThreads();
-    results.forEach(chat => {
+    results.forEach((chat) => {
       const thread = document.createElement("div");
       thread.classList.add("chat-thread");
       thread.setAttribute("data-id", chat._id);
@@ -230,9 +231,9 @@ async function renderChatThreads(data) {
                 <img src="${chat.user.avatar}" alt="${chat.user.name}">
                 <div class="chat-thread-info">
                     <span class="chat-thread-name">${chat.user.name}</span>
-                    <span class="chat-thread-preview">${chat.messages.length && chat.messages[chat.messages.length - 1].text}</span>
+                    <span class="chat-thread-preview">${chat.messages.length ? chat.messages[chat.messages.length - 1].text : ""}</span>
                 </div>
-                <span class="chat-thread-time">${chat.messages.length && chat.messages[chat.messages.length - 1].time}</span>
+                <span class="chat-thread-time">${chat.messages.length ? chat.messages[chat.messages.length - 1].time : ""}</span>
             `;
       chatList.appendChild(thread);
     });
@@ -254,25 +255,27 @@ function renderMessages(chatId) {
   try {
     const chat = chats.find(c => c._id === chatId);
     if (!chat) {
-      chatMessages.innerHTML = "<p>Select a chat to view messages.</p>";
+      chatMessages.innerHTML = `<div class="no-message">Select a chat to view messages.</p>`;
+      chatHeader.style.display = "none";
+      chatInput.style.display = "none";
       return;
     }
 
+
+    chatHeader.style.display = "flex";
+    chatInput.style.display = "flex";
     chatContact.querySelector(".contact-name").textContent = chat.user.name;
     chatContact.querySelector(".contact-status").textContent = chat.user.status;
     chatContact.querySelector(".contact-img").src = chat.user.avatar;
 
     chatMessages.innerHTML = "";
-    if (!chat.messages) {
-      return
-    }
     chat.messages.forEach(message => {
       const messageEl = document.createElement("div");
-      messageEl.classList.add("message", message.sender === "user" ? "sent" : "received");
+      messageEl.classList.add("message", message.sender === "admin" ? "sent" : "received");
       messageEl.innerHTML = `
                 <p>${message.text}</p>
                 <span class="message-time">${message.time}</span>
-                ${message.sender === "user" ? '<span class="message-ticks fas fa-check-double"></span>' : ""}
+                ${message.read ? '<span class="message-ticks fas fa-check-double"></span>' : ""}
             `;
       chatMessages.appendChild(messageEl);
     });
@@ -324,6 +327,7 @@ function sendMessage() {
     const activeThread = document.querySelector(".chat-thread.active");
     if (!activeThread) {
       console.log("No chat selected");
+      alert("its me")
       return;
     }
 
@@ -331,18 +335,12 @@ function sendMessage() {
     const chat = chats.find(c => c._id === chatId);
     if (chat) {
       const newMessage = {
-        text,
         sender: "admin",
-        time: new Intl.DateTimeFormat('default', {
-          hour: 'numeric',
-          minute: 'numeric',
-          second: 'numeric'
-        }).format(new Date()),
-        read: true
+        room: chatId,
+        text,
       };
-      chat.messages.push(newMessage);
+      socket.emit("message", newMessage);
       console.log(`Message sent to chat ${chatId}: ${text}`); // Replace with AJAX/WebSocket
-      socket.emit("chat message", newMessage);
       renderMessages(chatId);
       renderChatThreads(chats); // Update thread preview
       messageInput.value = "";
@@ -352,21 +350,13 @@ function sendMessage() {
   }
 }
 
-socket.on("chat message", function(msg) {
-  const activeThread = document.querySelector(".chat-thread.active");
-  if (!activeThread) {
-    console.log("No chat selected");
-    return;
-  }
-
-  const chatId = activeThread.getAttribute("data-id");
-  const chat = chats.find(c => c._id === chatId);
-  chat.messages.push(msg);
-  renderMessages(chatId);
+socket.on('message', function(msg) {
+  const chat = chats.find(c => c._id === msg.room);
+  chat.messages.push(msg.message);
+  renderMessages(msg.room);
   renderChatThreads(chats);
   window.scrollTo(0, document.body.scrollHeight);
 });
-
 
 // New Chat Button
 newChatBtn.addEventListener("click", () => {
@@ -377,16 +367,15 @@ newChatBtn.addEventListener("click", () => {
 chatSearch.addEventListener("input", () => {
   try {
     const value = chatSearch.value.toLowerCase();
-    const filtered = chats.filter(c => c.user.name.toLowerCase().includes(value));
+    const filtered = chats.filter(c => c.contact.toLowerCase().includes(value));
     renderChatThreads(filtered);
   } catch (error) {
     console.error("Error searching chats:", error);
   }
 });
 
+// Initial Render
 renderChatThreads(chats);
-if (chats.length > 0) {
-  document.querySelector(".chat-thread").classList.add("active");
-  renderMessages(chats[0]._id);
-}
-
+// if (chats.length > 0) {
+//   document.querySelector(".chat-thread").classList.add("active");
+// }

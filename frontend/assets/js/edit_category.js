@@ -1,6 +1,7 @@
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import showStatusModal from "./modal.js";
+import { loadingIndicator } from "./loader.js";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -190,6 +191,7 @@ function loadCategoryDetails() {
 // Form Submission
 document.querySelector(".save-btn").addEventListener("click", async function() {
   try {
+    loadingIndicator.show("updating...")
     const id = document.querySelector(".category-id").value;
     const name = document.querySelector(".category-name").value;
     const description = document.querySelector(".category-description").value;
@@ -199,8 +201,10 @@ document.querySelector(".save-btn").addEventListener("click", async function() {
     const response = await fetch("/api/edit_category", { method: "PUT", headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, name, description }) });
     const result = await response.json();
     if (result.success) {
+      loadingIndicator.hide();
       showStatusModal("success");
     } else {
+      loadingIndicator.hide();
       showStatusModal("failed");
     }
   } catch (error) {

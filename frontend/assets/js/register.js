@@ -36,8 +36,12 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // Form validation
-  registerBtn.addEventListener("click", (e) => {
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
     const inputs = form.querySelectorAll("input[required]");
+    const error = document.getElementById("error");
+    const name = document.getElementById("name");
+    const email = document.getElementById("email");
     const password = document.getElementById("password");
     const confirmPassword = document.getElementById("confirm-password");
     let isValid = true;
@@ -62,7 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
         yoyo: true,
         repeat: 1
       });
-      alert("Passwords do not match!");
+      error.textContent = "Passwords do not match!";
     }
 
     if (isValid) {
@@ -71,12 +75,24 @@ document.addEventListener("DOMContentLoaded", () => {
         duration: 0.1,
         yoyo: true,
         repeat: 1,
-        onComplete: () => {
-          alert("Registration successful!"); // Placeholder
+        onComplete: async () => {
+          const response = await fetch("/api/signup", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ name: name.value, email: email.value, password: password.value })
+          });
+          const { success, message } = await response.json();
+          if (success) {
+            window.location.href = "/login"
+          } else {
+            error.textContent = message;
+          }
         }
       });
     } else {
-      alert("Please fill in all required fields.");
+      error.textContent = "Please fill in all required fields.";
     }
   });
 

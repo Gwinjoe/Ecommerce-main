@@ -19,8 +19,10 @@ window.addEventListener("DOMContentLoaded", async () => {
   renderChatThreads(results);
   if (chats.length > 0) {
     document.querySelector(".chat-thread").classList.add("active");
-    renderMessages(results[0]._id);
+    renderMessages();
   }
+  const rooms = results.map((result) => result._id);
+  socket.emit("enterAllRooms", rooms)
 })
 
 const chats2 = [
@@ -66,6 +68,8 @@ const newChatBtn = document.querySelector(".new-chat-btn");
 const chatSearch = document.querySelector(".chat-search input");
 const chatSidebar = document.querySelector(".chat-sidebar");
 const chatContact = document.querySelector(".chat-contact");
+const chatInput = document.querySelector(".chat-input");
+const chatHeader = document.querySelector(".chat-header");
 
 // Set current year in footer
 yearSpan.textContent = new Date().getFullYear();
@@ -227,9 +231,9 @@ async function renderChatThreads(data) {
                 <img src="${chat.admin.avatar}" alt="${chat.admin.name}">
                 <div class="chat-thread-info">
                     <span class="chat-thread-name">${chat.admin.name}</span>
-                    <span class="chat-thread-preview">${chat.messages.length && chat.messages[chat.messages.length - 1].text}</span>
+                    <span class="chat-thread-preview">${chat.messages.length ? chat.messages[chat.messages.length - 1].text : ""}</span>
                 </div>
-                <span class="chat-thread-time">${chat.messages.length && chat.messages[chat.messages.length - 1].time}</span>
+                <span class="chat-thread-time">${chat.messages.length ? chat.messages[chat.messages.length - 1].time : ""}</span>
             `;
       chatList.appendChild(thread);
     });
@@ -251,10 +255,15 @@ function renderMessages(chatId) {
   try {
     const chat = chats.find(c => c._id === chatId);
     if (!chat) {
-      chatMessages.innerHTML = "<p>Select a chat to view messages.</p>";
+      chatMessages.innerHTML = `<div class="no-message">Select a chat to view messages.</p>`;
+      chatHeader.style.display = "none";
+      chatInput.style.display = "none";
       return;
     }
 
+
+    chatHeader.style.display = "flex";
+    chatInput.style.display = "flex";
     chatContact.querySelector(".contact-name").textContent = chat.admin.name;
     chatContact.querySelector(".contact-status").textContent = chat.admin.status;
     chatContact.querySelector(".contact-img").src = chat.admin.avatar;
@@ -318,6 +327,7 @@ function sendMessage() {
     const activeThread = document.querySelector(".chat-thread.active");
     if (!activeThread) {
       console.log("No chat selected");
+      alert("its me")
       return;
     }
 
@@ -325,17 +335,11 @@ function sendMessage() {
     const chat = chats.find(c => c._id === chatId);
     if (chat) {
       const newMessage = {
-        text,
         sender: "user",
-        time: new Intl.DateTimeFormat('default', {
-          hour: 'numeric',
-          minute: 'numeric',
-          second: 'numeric'
-        }).format(new Date()),
-        read: true
+        room: chatId,
+        text,
       };
-      chat.messages.push(newMessage);
-      socket.emit("chat message", newMessage);
+      socket.emit("message", newMessage);
       console.log(`Message sent to chat ${chatId}: ${text}`); // Replace with AJAX/WebSocket
       renderMessages(chatId);
       renderChatThreads(chats); // Update thread preview
@@ -346,7 +350,7 @@ function sendMessage() {
   }
 }
 
-socket.on('chat message', function(msg) {
+socket.on('message', function(msg) {
   const activeThread = document.querySelector(".chat-thread.active");
   if (!activeThread) {
     console.log("No chat selected");
@@ -381,5 +385,4 @@ chatSearch.addEventListener("input", () => {
 renderChatThreads(chats);
 if (chats.length > 0) {
   document.querySelector(".chat-thread").classList.add("active");
-  renderMessages(chats[0]._id);
 }

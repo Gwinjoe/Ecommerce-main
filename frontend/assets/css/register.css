@@ -234,6 +234,13 @@ body {
     font-family: 'Open Sans', sans-serif;
 }
 
+.err-msg {
+     color: #e74c3c;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin-top: 5px;
+}
+
 @media (max-width: 768px) {
     .diagonal {
         width: 100%;

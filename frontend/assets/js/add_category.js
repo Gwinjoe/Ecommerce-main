@@ -1,6 +1,7 @@
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import showStatusModal from "./modal.js";
+import { loadingIndicator } from "./loader.js"
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -159,6 +160,7 @@ document.addEventListener("click", (e) => {
 // Form Submission
 button.addEventListener("click", async function() {
   try {
+    loadingIndicator.show();
     const name = document.querySelector(".category-name").value;
     const description = document.querySelector(".category-description").value;
 
@@ -176,10 +178,12 @@ button.addEventListener("click", async function() {
     const result = await response.json();
 
     if (result.success) {
+      loadingIndicator.hide();
       showStatusModal("success");
       name = "";
       description = "";
     } else {
+      loadingIndicator.hide();
       showStatusModal("failed");
     }
   } catch (error) {

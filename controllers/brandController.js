@@ -40,6 +40,11 @@ exports.get_brand_by_id = async (req, res) => {
 exports.add_brand = async (req, res) => {
   const { name, description } = req.body;
   try {
+    const existingBrand = await Brands.findOne({ name });
+    if (existingBrand) {
+      return res.status(401).json({ success: false, message: "Brand already Exists!" });
+    }
+
     const newBrand = await new Brands({
       name,
       description,
@@ -55,9 +60,9 @@ exports.add_brand = async (req, res) => {
 exports.edit_brand = async (req, res) => {
   const { id, name, description } = req.body;
   try {
-    const existingOrder = await Brands.findById(id);
+    const existingBrand = await Brands.findById(id);
 
-    if (!existingOrder) {
+    if (!existingBrand) {
       return res.status(401).json({ success: false, message: "Cannot find Brand" });
     }
 

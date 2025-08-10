@@ -1,5 +1,6 @@
 import { gsap } from "gsap";
 import showStatusModal from "./modal.js"
+import { loadingIndicator } from "./loader.js";
 
 // Log script loading for debugging
 console.log("products.js loaded");
@@ -405,6 +406,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     } else if (target.classList.contains("delete-btn")) {
       if (confirm("Are you sure you want to delete this product?")) {
+        loadingIndicator.show("Deleting...");
         const row = target.closest("tr") || target.closest(".product-card");
         gsap.to(row, {
           opacity: 0,
@@ -419,8 +421,10 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             const { success, message } = await response.json();
             if (success) {
+              loadingIndicator.hide();
               showStatusModal("success", message)
             } else {
+              loadingIndicator.hide();
               showStatusModal("failed", message)
             }
             if (currentProducts.length <= (currentPage - 1) * 5) {
@@ -442,6 +446,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const selectedCheckboxes = document.querySelectorAll(".select-product:checked");
       if (selectedCheckboxes.length === 0) return;
       if (confirm(`Are you sure you want to delete ${selectedCheckboxes.length} product(s)?`)) {
+        loadingIndicator.show("Deleting...")
         const selectedIds = Array.from(selectedCheckboxes).map(cb => cb.dataset.id);
         const rows = Array.from(selectedCheckboxes).map(cb => cb.closest("tr") || cb.closest(".product-card"));
         gsap.to(rows, {
@@ -464,8 +469,10 @@ document.addEventListener("DOMContentLoaded", () => {
             const { success, message } = await response.json();
 
             if (success) {
+              loadingIndicator.hide();
               showStatusModal("success", message)
             } else {
+              loadingIndicator.hide();
               showStatusModal("failed", message);
             }
 
@@ -492,6 +499,7 @@ document.addEventListener("DOMContentLoaded", () => {
       trackEvent("bulk_category_select", { category: bulkCategorySelect.value });
     });
     assignCategoryBtn.addEventListener("click", async () => {
+      loadingIndicator.show("Updating...")
       const selectedCheckboxes = document.querySelectorAll(".select-product:checked");
       if (selectedCheckboxes.length === 0 || !bulkCategorySelect.value) return;
       const selectedIds = Array.from(selectedCheckboxes).map(cb => cb.dataset.id);
@@ -514,8 +522,10 @@ document.addEventListener("DOMContentLoaded", () => {
       const { success, message } = await response.json();
 
       if (success) {
+        loadingIndicator.hide();
         showStatusModal("success", message);
       } else {
+        loadingIndicator.hide();
         showStatusModal("failed", message);
       }
 

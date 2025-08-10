@@ -1,5 +1,6 @@
 const { signupSchema, signinSchema, emailSchema, verificationCodeSchema, changePasswordSchema } = require("../middlewares/validator")
 const User = require("../models/userModel");
+const passport = require("passport");
 const { dohash, dohashValidation, hmacProcess } = require("../utils/hashing");
 const transport = require("../middlewares/sendmail")
 
@@ -21,9 +22,8 @@ exports.signup = async (req, res) => {
       password: hashedPassword,
     })
 
-    await newUser.save();
-    //res.json({ success: true, message: "Your Account has been created successfuly", result });
-    return res.status(201).redirect("/login");
+    const result = await newUser.save();
+    res.status(201).json({ success: true, message: "Your Account has been created successfuly", result });
   } catch (error) {
     console.log(error)
   }
@@ -37,16 +37,15 @@ exports.signin = async (username, password, done) => {
     const user = await User.findOne({ email: username }).select("+password");
 
     if (!user) {
-      done(null, false);
+      return done(null, false, { message: "User not found!" });
     }
 
     const validPassword = await dohashValidation(password, user.password);
 
     if (!validPassword) {
-      done(null, false);
+      return done(null, false, { message: "Invalid Credentials!" });
     }
-
-    done(null, user);
+    return done(null, user);
   } catch (error) {
     console.log(error)
   }

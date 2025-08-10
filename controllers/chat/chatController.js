@@ -6,7 +6,7 @@ exports.getChatsThread = async (req, res) => {
 
   try {
     const existingChat = await Chats.find({ user: id }).sort({ createdAt: -1 }).populate("admin");
-    console.log("user chats Thread : " + existingChat);
+    // console.log("user chats Thread : " + existingChat);
     if (!existingChat || !existingChat.length) {
       const admins = await Users.find({ admin: true });
       const activeAdmins = admins.length > 1 ? admins.map((admin) => {
@@ -14,10 +14,10 @@ exports.getChatsThread = async (req, res) => {
           return admin
         }
       }) : admins;
-      console.log(activeAdmins)
+      //  console.log(activeAdmins)
       const randomIndex = Math.floor(Math.random() * activeAdmins.length);
       const randomAdmin = activeAdmins[randomIndex];
-      console.log(randomAdmin)
+      // console.log(randomAdmin)
       const newChat = new Chats({
         user: id,
         admin: randomAdmin._id,
@@ -37,13 +37,13 @@ exports.getChatsThread = async (req, res) => {
 exports.getAdminChatsThread = async (req, res) => {
   const id = req.user._id;
   try {
-    const results = await Chats.find({ admin: id }).sort({ createdAt: -1 }).populate("user");
-    if (!results) {
+    const existingChat = await Chats.find({ admin: id }).sort({ createdAt: -1 }).populate("user");
+    if (!existingChat) {
       return res.status(401).json({ success: false, message: "no active chats" });
     }
 
-    console.log("Admin chats Thread : " + results);
-    res.status(201).json({ success: true, results })
+    // console.log("Admin chats Thread : " + results);
+    res.status(201).json({ success: true, existingChat })
   } catch (err) {
     if (err) console.log(err)
   }

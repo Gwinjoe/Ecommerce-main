@@ -1,6 +1,7 @@
 const { Server } = require('socket.io');
 const wrap = require('../../middlewares/wrapMiddleware');
 const passport = require('passport');
+const { enterAllRooms, buildMsg } = require("./chatSocket");
 const Users = require("../../models/userModel")
 const Chats = require("../../models/chatSchema")
 
@@ -23,21 +24,40 @@ module.exports = function(server, sessionMiddleware) {
     const user = socket.request.user;
     const id = user._id;
     const isAdmin = user.admin;
-    console.log(`User connected: ${user}`);
     let chats = []
-    if (isAdmin) {
-      chats = await Chats.find({ admin: id }).populate("user");
-    } else {
-      chats = await Chats.find({ admin: id }).populate("admin");
-    }
-    socket.on('chat message', (msg) => {
+
+    socket.on('message', async (msg) => {
+      const roomId = msg.room;
+      console.log(roomId);
+      const message = buildMsg(msg.sender, msg.text)
+
       console.log(`${user.email}: ${msg}`);
       // Broadcast to admin or whoever is supposed to receive
-      socket.broadcast.emit('chat message', msg);
+
+      const existingRoom = await Chats.findById(roomId)
+      if (!existingRoom) {
+        return;
+      }
+
+      existingRoom.messages.push(message)
+
+      const results = await existingRoom.save();
+
+      io.to(roomId).emit('message', { message: results.messages[results.messages.length - 1], room: roomId });
+      console.log(results.messages[results.messages.length - 1]);
     });
+    socket.on('enterAllRooms', (rooms) => {
+      if (rooms) {
+        rooms.forEach((room) => {
+          socket.join(room);
+          console.log(`${user.name} just joined ${room}`)
+        })
+      }
+    }
+    );
 
     socket.on('disconnect', () => {
-      console.log(`${user.username} disconnected`);
+      console.log(`${user.name} disconnected`);
     });
   });
 };

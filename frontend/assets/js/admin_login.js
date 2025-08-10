@@ -1,4 +1,5 @@
 import { gsap } from "gsap";
+import { loadingIndicator } from "./loader.js";
 
 // Log script loading for debugging
 console.log("login.js loaded");
@@ -57,35 +58,51 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Login button handler
   const loginBtn = document.querySelector(".login-btn");
-  if (loginBtn) {
-    loginBtn.addEventListener("click", () => {
-      if (validateForm()) {
-        const email = document.querySelector("#email")?.value;
-        const rememberMe = document.querySelector("#remember-me")?.checked;
-        gsap.to(loginBtn, {
-          scale: 0.95,
-          duration: 0.1,
-          ease: "power2.in",
-          onComplete: () => {
-            gsap.to(loginBtn, { scale: 1, duration: 0.1 });
-            console.log(`Login attempt: Email=${email}, RememberMe=${rememberMe}`);
-            trackEvent("login_submit", { email: email, remember_me: rememberMe });
+  const form = document.querySelector("#form")
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (validateForm()) {
+      const email = document.querySelector("#email")?.value;
+      const password = document.querySelector("#password")?.value;
+      //const rememberMe = document.querySelector("#remember-me")?.checked;
+      gsap.to(loginBtn, {
+        scale: 0.95,
+        duration: 0.1,
+        ease: "power2.in",
+        onComplete: async () => {
+          const response = await fetch("/api/admin_signin", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ email: email, password: password })
+          });
+          const { success, message, redirect } = await response.json();
+
+          if (success) {
+            window.location.href = redirect;
+          } else {
+            document.querySelector("#error").textContent = message;
+            window.location.href = redirect;
           }
-        });
-      } else {
-        gsap.to(loginBtn, {
-          x: -10,
-          duration: 0.1,
-          repeat: 3,
-          yoyo: true,
-          ease: "power2.inOut"
-        });
-        trackEvent("login_failed");
-      }
-    });
-  } else {
-    console.error("Error: .login-btn not found");
-  }
+
+          gsap.to(loginBtn, { scale: 1, duration: 0.1 });
+          console.log(`Login attempt: Email=${email}, RememberMe=${rememberMe}`);
+          trackEvent("login_submit", { email: email, remember_me: rememberMe });
+        }
+      });
+    } else {
+      gsap.to(loginBtn, {
+        x: -10,
+        duration: 0.1,
+        repeat: 3,
+        yoyo: true,
+        ease: "power2.inOut"
+      });
+      trackEvent("login_failed");
+    }
+  });
+
 
   // Input tracking
   const inputs = document.querySelectorAll(".login-form input");

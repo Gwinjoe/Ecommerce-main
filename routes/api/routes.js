@@ -3,10 +3,10 @@ const express = require("express");
 const router = express.Router();
 const { delete_multiple_products, editMultipleProducts, get_product_by_id, category_count, product_count, edit_product, delete_product, getProducts, add_category, get_categories, edit_category, get_category_by_id, delete_category, add_product } = require("../../controllers/productController")
 const { addTo_cart, addTo_wishlist, deletefrom_cart, deletefrom_wishlist } = require("../../controllers/userController")
-const passport = require("passport");
 const { signup, signout, adminSignout } = require("../../controllers/authController")
 const { get_users, get_user_by_id, edit_user, delete_user, user_count, add_user, get_user } = require("../../controllers/userController")
 const path = require("path");
+const passport = require("passport");
 const multer = require('multer');
 const { getChatsThread, getAdminChatsThread, getChats } = require("../../controllers/chat/chatController");
 const { get_order_by_id, add_order, getOrders, delete_multiple_orders, delete_order, edit_order, editMultipleOrders, order_count } = require("../../controllers/orderController")
@@ -22,8 +22,78 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-router.post("/login", passport.authenticate("local", { successRedirect: "/dashboard", failureRedirect: "/login" }));
-router.post("/signin", passport.authenticate("local", { successRedirect: "/admin", failureRedirect: "/admin/login" }));
+
+router.post("/signin",
+  passport.authenticate("local", {
+    failWithError: true
+  }),
+  (req, res) => {
+    res.json({
+      success: true,
+      message: "Login successful!",
+      redirect: "/dashboard",
+      user: {
+        id: req.user.id,
+        email: req.user.email
+      }
+    });
+  },
+  (err, req, res, next) => {
+    if (err.name === 'AuthenticationError') {
+      return res.status(401).json({
+        success: false,
+        message: err.message || "Authentication failed",
+        redirect: "/login"
+      });
+    }
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      redirect: "/login"
+    });
+  }
+);
+
+router.post("/admin_signin",
+  passport.authenticate("local", {
+    failWithError: true
+  }),
+  (req, res) => {
+
+    if (!req.user.admin) {
+      return res.json({
+        success: false,
+        message: "Must be an Admin, redirecting you to appropriate dashboard!",
+        redirect: "/login",
+      })
+    }
+    res.json({
+      success: true,
+      message: "Login successful!",
+      redirect: "/admin",
+      user: {
+        id: req.user.id,
+        email: req.user.email
+      }
+    });
+  },
+  (err, req, res, next) => {
+    if (err.name === 'AuthenticationError') {
+      return res.status(401).json({
+        success: false,
+        message: err.message || "Authentication failed",
+        redirect: "/admin/login"
+      });
+    }
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      redirect: "/admin/login"
+    });
+  }
+);
+
+
 router.post("/signup", signup);
 router.get("/logout", signout);
 router.get("/signout", adminSignout);

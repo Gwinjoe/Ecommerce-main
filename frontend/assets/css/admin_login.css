@@ -126,6 +126,13 @@ h1 {
     display: block;
 }
 
+.err-msg {
+    color: #e74c3c;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    margin-top: 5px;
+}
+
 .form-options {
     display: flex;
     justify-content: space-between;

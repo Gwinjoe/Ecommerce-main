@@ -3,6 +3,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 gsap.registerPlugin(ScrollTrigger);
 import showStatusModal from "./modal.js"
+import { loadingIndicator } from "./loader.js";
 
 const response = await fetch("http://localhost:3500/api/users")
 const results = await response.json();
@@ -266,6 +267,7 @@ window.closeModal = function() {
 };
 
 window.deleteUser = async function(id) {
+  loadingIndicator.show("Deleting user...")
   const index = users.findIndex(u => u._id === id);
   if (index !== -1) {
     const res = await fetch(`/api/delete_user/${id}`, {
@@ -276,8 +278,10 @@ window.deleteUser = async function(id) {
     });
     const { success } = await res.json();
     if (success) {
+      loadingIndicator.hide();
       showStatusModal("success");
     } else {
+      loadingIndicator.hide();
       showStatusModal("failed")
     }
 
@@ -308,6 +312,7 @@ window.saveUser = async function() {
   }
 
   if (id) {
+    loadingIndicator.show("Updating...");
     const user = users.find(u => u._id == id);
     if (user) {
       user.name = name;
@@ -326,12 +331,15 @@ window.saveUser = async function() {
       });
       const { success } = await response.json();
       if (success) {
+        loadingIndicator.hide();
         showStatusModal("success");
       } else {
+        loadingIndicator.hide();
         showStatusModal("failed");
       }
     }
   } else {
+    loadingIndicator.show("Creating User...")
     const response = await fetch("/api/add_user", {
       method: "POST",
       headers: { 'Content-Type': 'application/json' },
@@ -344,8 +352,10 @@ window.saveUser = async function() {
     });
     const { success } = await response.json();
     if (success) {
+      loadingIndicator.hide();
       showStatusModal("success");
     } else {
+      loadingIndicator.hide();
       showStatusModal("failed");
     }
   }

@@ -1,6 +1,6 @@
 import showStatusModal from "./modal.js";
 import { gsap } from "gsap";
-
+import { loadingIndicator } from "./loader.js";
 // Log script loading for debugging
 console.log("add_product.js loaded");
 
@@ -478,7 +478,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const whatsInBox = Array.from(document.querySelectorAll("#whats-in-box input")).map(input => input.value.trim()).filter(val => val) || [document.querySelector("whats-in-box input").value];
         const productDetails = document.querySelector("#product-details")?.value;
 
-
+        loadingIndicator.show("Uploading..");
         const formData = new FormData();
         formData.append("name", productName);
         formData.append("description", description);
@@ -494,14 +494,17 @@ document.addEventListener("DOMContentLoaded", () => {
         formData.append("whatsInBox", JSON.stringify(whatsInBox));
         formData.append("productDetails", productDetails);
 
+
         const response = await fetch("/api/add_product", {
           method: "POST",
           body: formData,
         });
         const { success, message } = await response.json();
         if (success) {
+          loadingIndicator.hide();
           showStatusModal("success", message);
         } else {
+          loadingIndicator.hide();
           showStatusModal("failed", message);
         }
 
@@ -525,7 +528,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             alert("Product added successfully (placeholder)");
             trackEvent("add_product", { product_name: productName, category: category });
-            window.location.href = "index.html";
+            addBtn.innerHTML = "Add Product";
           }
         });
       } else {

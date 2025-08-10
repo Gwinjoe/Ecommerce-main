@@ -37,6 +37,14 @@ body {
     overflow: hidden;
 }
 
+.error-message {
+   color: #e74c3c;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    margin-top: 5px;
+
+}
+
 .diagonal-content {
     text-align: center;
     padding: 40px 20px;

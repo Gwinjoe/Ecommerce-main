@@ -1,5 +1,6 @@
 import { gsap } from "gsap";
 import showStatusModal from "./modal.js"
+import { loadingIndicator } from "./loader.js";
 
 // Log script loading for debugging
 console.log("edit_product.js loaded");
@@ -571,6 +572,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const whatsInBox = Array.from(document.querySelectorAll("#whats-in-box input")).map(input => input.value.trim()).filter(val => val) || [document.querySelector("whats-in-box input").value];
         const productDetails = document.querySelector("#product-details")?.value;
 
+        loadingIndicator.show("updating...")
 
         const formData = new FormData();
         formData.append("id", productId);
@@ -593,8 +595,10 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         const { success, message } = await response.json();
         if (success) {
+          loadingIndicator.hide();
           showStatusModal("success", message);
         } else {
+          loadingIndicator.hide();
           showStatusModal("failed", message);
         }
 

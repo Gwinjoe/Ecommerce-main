@@ -1,7 +1,7 @@
-<<<<<<< HEAD
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import showStatusModal from "./modal.js";
+import { loadingIndicator } from "./loader.js";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -16,7 +16,6 @@ const userProfile = document.querySelector(".user-profile");
 const scrollTopBtn = document.querySelector(".scroll-top-btn");
 const yearSpan = document.querySelector(".year");
 const newsletterForm = document.querySelector(".footer-newsletter");
-const form = document.querySelector(".category-form");
 const button = document.querySelector(".save-btn")
 
 // Set current year in footer
@@ -163,6 +162,9 @@ button.addEventListener("click", async function() {
     const name = document.querySelector(".category-name").value;
     const description = document.querySelector(".category-description").value;
 
+    loadingIndicator.show("creating brand");
+
+
     const response = await fetch("/api/add_brand", {
       method: "POST",
       headers: {
@@ -176,12 +178,13 @@ button.addEventListener("click", async function() {
 
     const result = await response.json();
 
-    alert("success")
     if (result.success) {
+      loadingIndicator.hide();
       showStatusModal("success");
       name = "";
       description = "";
     } else {
+      loadingIndicator.hide();
       showStatusModal("failed");
     }
   } catch (error) {
@@ -195,66 +198,3 @@ gsap.from(".category-form", {
   duration: 0.5,
   ease: "power2.out"
 });
-=======
-let brands = [];
-
-function addBrand() {
-    const brandName = document.getElementById('brandName').value;
-    const brandLogo = document.getElementById('brandLogo').files[0];
-    const brandDescription = document.getElementById('brandDescription').value;
-
-    if (!brandName) {
-        alert('Brand name is required');
-        return;
-    }
-
-    const brand = {
-        id: Date.now(),
-        name: brandName,
-        description: brandDescription,
-        logo: brandLogo ? URL.createObjectURL(brandLogo) : ''
-    };
-
-    brands.push(brand);
-    updateBrandList();
-    clearForm();
-
-    // Preview logo
-    if (brandLogo) {
-        const preview = document.getElementById('logoPreview');
-        preview.innerHTML = `<img src="${brand.logo}" alt="Brand Logo">`;
-    }
-}
-
-function updateBrandList() {
-    const brandList = document.getElementById('brandList');
-    brandList.innerHTML = '';
-    brands.forEach(brand => {
-        const div = document.createElement('div');
-        div.className = 'brand-item';
-        div.innerHTML = `
-            ${brand.logo ? `<img src="${brand.logo}" alt="${brand.name}">` : ''}
-            <span>${brand.name} - ${brand.description}</span>
-            <button onclick="deleteBrand(${brand.id})">Delete</button>
-        `;
-        brandList.appendChild(div);
-    });
-}
-
-function deleteBrand(id) {
-    brands = brands.filter(brand => brand.id !== id);
-    updateBrandList();
-}
-
-function clearForm() {
-    document.getElementById('brandName').value = '';
-    document.getElementById('brandLogo').value = '';
-    document.getElementById('brandDescription').value = '';
-    document.getElementById('logoPreview').innerHTML = '';
-}
-
-// Initialize
-document.addEventListener('DOMContentLoaded', () => {
-    updateBrandList();
-});
->>>>>>> 7614e12a395f8ffa379669ce48387b8edcebe144
