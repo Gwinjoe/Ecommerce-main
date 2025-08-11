@@ -60,3 +60,16 @@ exports.getChats = async (req, res) => {
     if (err) console.log(err)
   }
 }
+
+exports.deleteAllChats = async (req, res) => {
+  try {
+    const existingChats = await Chats.deleteMany({});
+    if (!existingChats) {
+      return res.status(401).json({ success: false, message: "No Chats Found" });
+    }
+    res.status(201).json({ success: true, message: "All chats deleted", existingChats })
+  } catch (err) {
+    if (err) console.log(err)
+  }
+
+}

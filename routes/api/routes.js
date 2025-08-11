@@ -8,7 +8,7 @@ const { get_users, get_user_by_id, edit_user, delete_user, user_count, add_user,
 const path = require("path");
 const passport = require("passport");
 const multer = require('multer');
-const { getChatsThread, getAdminChatsThread, getChats } = require("../../controllers/chat/chatController");
+const { deleteAllChats, getChatsThread, getAdminChatsThread, getChats } = require("../../controllers/chat/chatController");
 const { get_order_by_id, add_order, getOrders, delete_multiple_orders, delete_order, edit_order, editMultipleOrders, order_count } = require("../../controllers/orderController")
 const { get_brand_by_id, add_brand, getBrands, delete_brand, edit_brand, brand_count } = require("../../controllers/brandController")
 
@@ -154,4 +154,5 @@ router.get("/ordercount", order_count);
 router.get("/chats_thread", getChatsThread);
 router.get("/admin_chats_thread", getAdminChatsThread)
 router.get("/chats", getChats)
+router.get("/delete_all_chats", deleteAllChats);
 module.exports = router;

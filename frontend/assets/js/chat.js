@@ -1,5 +1,6 @@
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { inlineLoadingIndicator } from "./loader.js"
 
 const socket = io();
 
@@ -7,6 +8,21 @@ gsap.registerPlugin(ScrollTrigger);
 
 let chats = []
 // Sample chat data (replace with actual data from backend)
+
+socket.on("chats_thread", (threads) => {
+  chats = threads;
+  renderChatThreads(threads);
+  if (chats.length > 0) {
+    renderMessages();
+  }
+  alert(chats[0]._id);
+  const rooms = threads.map((result) => result._id);
+  socket.emit("enterAllRooms", rooms)
+})
+
+socket.on("updateChatThreads", () => { socket.emit("getChatThreads") })
+
+
 async function getChatThreads() {
   const response = await fetch("/api/chats_thread");
   const { existingChat } = await response.json();
@@ -14,14 +30,7 @@ async function getChatThreads() {
 }
 
 window.addEventListener("DOMContentLoaded", async () => {
-  const results = await getChatThreads();
-  chats = results;
-  renderChatThreads(results);
-  if (chats.length > 0) {
-    renderMessages();
-  }
-  const rooms = results.map((result) => result._id);
-  socket.emit("enterAllRooms", rooms)
+  socket.emit("getChatThreads")
 })
 
 const chats2 = [
@@ -69,6 +78,13 @@ const chatSidebar = document.querySelector(".chat-sidebar");
 const chatContact = document.querySelector(".chat-contact");
 const chatInput = document.querySelector(".chat-input");
 const chatHeader = document.querySelector(".chat-header");
+
+const loader = inlineLoadingIndicator();
+const loaderEl = document.createElement("div");
+loaderEl.classList.add("message", "received");
+loaderEl.innerHTML = loader;
+
+
 
 // Set current year in footer
 yearSpan.textContent = new Date().getFullYear();
@@ -252,6 +268,7 @@ async function renderChatThreads(data) {
                 <div class="chat-thread-info">
                     <span class="chat-thread-name">${chat.admin.name.substring(0, 20)}</span>
                     <span class="chat-thread-preview">${chat.messages.length ? chat.messages[chat.messages.length - 1].text.substring(0, 20) + "..." : ""}</span >
+                     ${chat.userUnreadMessages ? `<span class="notification-count msg">${chat.userUnreadMessages}</span>` : ""}
                 </div>
                 <span class="chat-thread-time">${chat.messages.length ? chat.messages[chat.messages.length - 1].time : ""}</span>
             `;
@@ -282,7 +299,12 @@ function renderMessages(chatId) {
       return;
     }
 
-    socket.emit("read", chatId);
+    const unreadMessages = chat.messages.find((message) => message.sender === "support" && !message.read);
+
+    if (unreadMessages) {
+      socket.emit("read", chatId);
+    }
+
     chatHeader.style.display = "flex";
     chatInput.style.display = "flex";
     chatContact.querySelector(".contact-name").textContent = chat.admin.name;
@@ -296,20 +318,19 @@ function renderMessages(chatId) {
       messageEl.innerHTML = `
                 <p>${message.text}</p>
                 <span class="message-time">${message.time}</span>
-                ${message.read ? '<span class="message-ticks fas fa-check-double"></span>' : ""}
+                ${message.read && message.sender === "user" ? '<span class="message-ticks fas fa-check-double"></span>' : ""}
             `;
       chatMessages.appendChild(messageEl);
     });
-
     chatMessages.scrollTop = chatMessages.scrollHeight;
 
-    gsap.from(".message", {
-      opacity: 0,
-      y: 10,
-      stagger: 0.1,
-      duration: 0.3,
-      ease: "power2.out"
-    });
+    // gsap.from(".message", {
+    //   opacity: 0,
+    //   y: 10,
+    //   stagger: 0.1,
+    //   duration: 0.3,
+    //   ease: "power2.out"
+    // });
   } catch (error) {
     console.error("Error rendering messages:", error);
   }
@@ -340,6 +361,19 @@ messageInput.addEventListener("keypress", (e) => {
   if (e.key === "Enter") sendMessage();
 });
 
+messageInput.addEventListener("keypress", () => {
+
+  const activeThread = document.querySelector(".chat-thread.active");
+  if (!activeThread) {
+    console.log("No chat selected");
+    alert("its me")
+    return;
+  }
+
+  const chatId = activeThread.getAttribute("data-id");
+
+  socket.emit('activity', chatId)
+})
 function sendMessage() {
   try {
     const text = messageInput.value.trim();
@@ -389,12 +423,38 @@ socket.on('message', function(msg) {
 socket.on("updateMessage", (msg) => {
   const chat = chats.find(c => c._id === msg.room);
   chat.messages.forEach((message) => {
-    if (!message.read) {
+    if (!message.read && message.sender === msg.sender) {
       message.read = true;
     }
   })
   renderMessages(msg.room)
 })
+
+let count = 0;
+let activityTimer;
+socket.on("activity", () => {
+  if (count < 1) {
+    chatMessages.appendChild(loaderEl);
+    count++
+  }
+
+  // Clear after 3 seconds 
+  clearTimeout(activityTimer)
+  activityTimer = setTimeout(() => {
+    chatMessages.removeChild(loaderEl);
+    count = 0;
+  }, 1000)
+})
+
+
+socket.on("newNotification", ({ userUnreadMessages }) => {
+  const notification = document.querySelector(".notification-count.msg")
+  if (notification) {
+    notification.textContent = userUnreadMessages;
+  }
+})
+
+
 // New Chat Button
 newChatBtn.addEventListener("click", () => {
   console.log("Starting new chat"); // Replace with logic to initiate new chat

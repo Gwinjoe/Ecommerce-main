@@ -41,9 +41,29 @@ const chatSchema = mongoose.Schema({
       }).format(new Date()),
     }
   }],
-
 }, {
   timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+
 })
+
+chatSchema.virtual("userUnreadMessages").get(function() {
+  if (!this.messages) {
+    return 0;
+  }
+  const messagesCount = this.messages.filter((message) => message.read === false && message.sender === "support").length;
+  return messagesCount;
+})
+
+chatSchema.virtual("supportUnreadMessages").get(function() {
+  if (!this.messages) {
+    return 0;
+  }
+  const messagesCount = this.messages.filter((message) => message.read === false && message.sender === "user").length;
+  console.log(messagesCount);
+  return messagesCount;
+})
+
 
 module.exports = mongoose.model("Chat", chatSchema)

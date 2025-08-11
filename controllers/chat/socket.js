@@ -4,6 +4,7 @@ const passport = require('passport');
 const { enterAllRooms, buildMsg } = require("./chatSocket");
 const Users = require("../../models/userModel")
 const Chats = require("../../models/chatSchema")
+const realtimechats = Chats.watch();
 
 module.exports = function(server, sessionMiddleware) {
   const io = new Server(server);
@@ -26,13 +27,63 @@ module.exports = function(server, sessionMiddleware) {
     const isAdmin = user.admin;
     let chats = []
 
+    console.log(user.name + " connected")
+
+    socket.on("getChatThreads", async () => {
+      try {
+        if (isAdmin) {
+          console.log("i am getChatThreads - admin")
+          const existingChats = await Chats.find({ admin: id }).populate("user");
+          if (!existingChats) {
+            return;
+          }
+          socket.emit("chats_thread", existingChats);
+        } else {
+
+          console.log("i am getChatThreads - user")
+          const existingChat = await Chats.find({ user: id }).sort({ createdAt: -1 }).populate("admin");
+          // console.log("user chats Thread : " + existingChat);
+          if (!existingChat || !existingChat.length) {
+            const admins = await Users.find({ admin: true });
+            const activeAdmins = admins.length > 1 ? admins.map((admin) => {
+              if (admin.active === true) {
+                return admin
+              }
+            }) : admins;
+            //  console.log(activeAdmins)
+            const randomIndex = Math.floor(Math.random() * activeAdmins.length);
+            const randomAdmin = activeAdmins[randomIndex];
+            // console.log(randomAdmin)
+            const newChat = new Chats({
+              user: id,
+              admin: randomAdmin._id,
+            })
+
+            const results = await newChat.save();
+            socket.emit("chats_thread", results)
+            io.broadcast.emit("updateChatThreads")
+          }
+          socket.emit("chats_thread", existingChat);
+        }
+      } catch (err) {
+        console.log(err)
+      }
+
+    })
+
+    socket.on('activity', (id) => {
+      if (id) {
+        socket.broadcast.to(id).emit('activity')
+      }
+    })
+
+
     socket.on('message', async (msg) => {
       const roomId = msg.room;
       console.log(roomId);
       const message = buildMsg(msg.sender, msg.text)
 
-      console.log(`${user.email}: ${msg}`);
-      // Broadcast to admin or whoever is supposed to receive
+
       const existingRoom = await Chats.findById(roomId)
       if (!existingRoom) {
         return;
@@ -57,9 +108,10 @@ module.exports = function(server, sessionMiddleware) {
 
     socket.on("read", async (id) => {
 
-      const sender = isAdmin ? "support" : "user";
+      const sender = isAdmin ? "user" : "support";
       const existingRoom = await Chats.findById(id)
       if (!existingRoom) {
+        console.log("no existing room so we got the fuck outta the function")
         return;
       }
 
@@ -71,8 +123,22 @@ module.exports = function(server, sessionMiddleware) {
 
       await existingRoom.save();
 
-      io.to(id).emit('updateMessage', { room: id });
+      io.to(id).emit('updateMessage', { room: id, sender });
 
+    })
+
+    realtimechats.on("change", async ({ documentKey }) => {
+      const existingChat = await Chats.findById(documentKey._id);
+      if (!existingChat) {
+        console.log("no chat matches that id");
+        return;
+      }
+      console.log(existingChat);
+      const userUnreadMessages = existingChat.userUnreadMessages;
+      const supportUnreadMessages = existingChat.supportUnreadMessages;
+      io.to(documentKey._id).emit("newNotification", {
+        userUnreadMessages, supportUnreadMessages
+      })
     })
 
     socket.on('disconnect', () => {

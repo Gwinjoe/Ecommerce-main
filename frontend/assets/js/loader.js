@@ -1,11 +1,11 @@
-export function inlineLoadingIndicator(color = '#3498db', size = 38) {
+export function inlineLoadingIndicator(color = '#3498db', size = 30) {
   // Calculate sizes based on the base size
   const dotSize = size / 8;
   const spacing = size / 4;
   const animationDuration = 0.6;
 
   return `
-        <svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="0 0 ${size} ${size}" width="${size * 1.7}" height="${size}" xmlns="http://www.w3.org/2000/svg">
             <style>
                 .bounce-dot {
                     fill: ${color};
