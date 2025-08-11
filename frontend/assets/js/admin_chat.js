@@ -18,7 +18,6 @@ window.addEventListener("DOMContentLoaded", async () => {
   chats = results;
   renderChatThreads(results);
   if (chats.length > 0) {
-    document.querySelector(".chat-thread").classList.add("active");
     renderMessages();
   }
   const rooms = results.map((result) => result._id);
@@ -218,6 +217,27 @@ document.addEventListener("click", (e) => {
   }
 });
 
+function updateChatThread(chatId, message) {
+  try {
+    if (chatId) {
+      const thread = document.querySelector(`[data-id="${chatId}"]`);
+      if (thread) {
+        const name = thread.querySelector(".chat-thread-name");
+        const time = thread.querySelector(".chat-thread-time");
+        const preview = thread.querySelector(".chat-thread-preview");
+
+        preview.textContent = `${message.text.substring(0, 20)}...`;
+        time.textContent = `${message.time}`;
+      } else {
+        alert("no thread found")
+      }
+    }
+  } catch (err) {
+    alert("error updating chat-thread");
+    console.log(err)
+  }
+}
+
 // Render Chat Threads
 async function renderChatThreads(data) {
   try {
@@ -230,10 +250,10 @@ async function renderChatThreads(data) {
       thread.innerHTML = `
                 <img src="${chat.user.avatar}" alt="${chat.user.name}">
                 <div class="chat-thread-info">
-                    <span class="chat-thread-name">${chat.user.name}</span>
-                    <span class="chat-thread-preview">${chat.messages.length ? chat.messages[chat.messages.length - 1].text : ""}</span>
+                    <span class="chat-thread-name">${chat.user.name.substring(0, 20)}</span>
+                    <span class="chat-thread-preview">${chat.messages.length ? chat.messages[chat.messages.length - 1].text.substring(0, 20) + "..." : ""}</span >
                 </div>
-                <span class="chat-thread-time">${chat.messages.length ? chat.messages[chat.messages.length - 1].time : ""}</span>
+      <span class="chat-thread-time">${chat.messages.length ? chat.messages[chat.messages.length - 1].time : ""}</span>
             `;
       chatList.appendChild(thread);
     });
@@ -253,15 +273,16 @@ async function renderChatThreads(data) {
 // Render Messages
 function renderMessages(chatId) {
   try {
+
     const chat = chats.find(c => c._id === chatId);
     if (!chat) {
-      chatMessages.innerHTML = `<div class="no-message">Select a chat to view messages.</p>`;
+      chatMessages.innerHTML = `<div class= "no-message" > Select a chat to view messages.</div> `;
       chatHeader.style.display = "none";
       chatInput.style.display = "none";
       return;
     }
 
-
+    socket.emit("read", chatId);
     chatHeader.style.display = "flex";
     chatInput.style.display = "flex";
     chatContact.querySelector(".contact-name").textContent = chat.user.name;
@@ -273,10 +294,10 @@ function renderMessages(chatId) {
       const messageEl = document.createElement("div");
       messageEl.classList.add("message", message.sender === "admin" ? "sent" : "received");
       messageEl.innerHTML = `
-                <p>${message.text}</p>
-                <span class="message-time">${message.time}</span>
+    <p> ${message.text}</p>
+    <span class="message-time">${message.time}</span>
                 ${message.read ? '<span class="message-ticks fas fa-check-double"></span>' : ""}
-            `;
+      `;
       chatMessages.appendChild(messageEl);
     });
 
@@ -342,7 +363,6 @@ function sendMessage() {
       socket.emit("message", newMessage);
       console.log(`Message sent to chat ${chatId}: ${text}`); // Replace with AJAX/WebSocket
       renderMessages(chatId);
-      renderChatThreads(chats); // Update thread preview
       messageInput.value = "";
     }
   } catch (error) {
@@ -351,12 +371,29 @@ function sendMessage() {
 }
 
 socket.on('message', function(msg) {
+  const activeThread = document.querySelector(".chat-thread.active");
+  if (!activeThread) {
+    console.log("No chat selected");
+    alert("no chat selected")
+    return;
+  }
+
+  const chatId = activeThread.getAttribute("data-id");
   const chat = chats.find(c => c._id === msg.room);
   chat.messages.push(msg.message);
-  renderMessages(msg.room);
-  renderChatThreads(chats);
-  window.scrollTo(0, document.body.scrollHeight);
+  renderMessages(chatId);
+  updateChatThread(chatId, msg.message)
 });
+
+socket.on("updateMessage", (msg) => {
+  const chat = chats.find(c => c._id === msg.room);
+  chat.messages.forEach((message) => {
+    if (!message.read) {
+      message.read = true;
+    }
+  })
+  renderMessages(msg.room)
+})
 
 // New Chat Button
 newChatBtn.addEventListener("click", () => {

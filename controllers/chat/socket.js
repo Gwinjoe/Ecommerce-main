@@ -33,7 +33,6 @@ module.exports = function(server, sessionMiddleware) {
 
       console.log(`${user.email}: ${msg}`);
       // Broadcast to admin or whoever is supposed to receive
-
       const existingRoom = await Chats.findById(roomId)
       if (!existingRoom) {
         return;
@@ -44,7 +43,7 @@ module.exports = function(server, sessionMiddleware) {
       const results = await existingRoom.save();
 
       io.to(roomId).emit('message', { message: results.messages[results.messages.length - 1], room: roomId });
-      console.log(results.messages[results.messages.length - 1]);
+      console.log({ room: roomId, message: results.messages[results.messages.length - 1] });
     });
     socket.on('enterAllRooms', (rooms) => {
       if (rooms) {
@@ -55,6 +54,26 @@ module.exports = function(server, sessionMiddleware) {
       }
     }
     );
+
+    socket.on("read", async (id) => {
+
+      const sender = isAdmin ? "support" : "user";
+      const existingRoom = await Chats.findById(id)
+      if (!existingRoom) {
+        return;
+      }
+
+      existingRoom.messages.forEach((message) => {
+        if (!message.read && message.sender === sender) {
+          message.read = true;
+        }
+      })
+
+      await existingRoom.save();
+
+      io.to(id).emit('updateMessage', { room: id });
+
+    })
 
     socket.on('disconnect', () => {
       console.log(`${user.name} disconnected`);
