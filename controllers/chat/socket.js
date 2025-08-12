@@ -94,7 +94,6 @@ module.exports = function(server, sessionMiddleware) {
       const results = await existingRoom.save();
 
       io.to(roomId).emit('message', { message: results.messages[results.messages.length - 1], room: roomId });
-      console.log({ room: roomId, message: results.messages[results.messages.length - 1] });
     });
     socket.on('enterAllRooms', (rooms) => {
       if (rooms) {
@@ -133,11 +132,8 @@ module.exports = function(server, sessionMiddleware) {
         console.log("no chat matches that id");
         return;
       }
-      console.log(existingChat);
-      const userUnreadMessages = existingChat.userUnreadMessages;
-      const supportUnreadMessages = existingChat.supportUnreadMessages;
-      io.to(documentKey._id).emit("newNotification", {
-        userUnreadMessages, supportUnreadMessages
+      io.to(existingChat._id).emit("newNotification", {
+        existingChat, id: existingChat._id
       })
     })
 

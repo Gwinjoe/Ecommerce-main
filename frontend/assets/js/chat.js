@@ -254,6 +254,33 @@ function updateChatThread(chatId, message) {
   }
 }
 
+
+function updateNotifications(chatId, message) {
+  try {
+    if (chatId) {
+      const thread = document.querySelector(`[data-id="${chatId}"]`);
+      if (thread) {
+        const name = thread.querySelector(".chat-thread-name");
+        const time = thread.querySelector(".chat-thread-time");
+        const preview = thread.querySelector(".chat-thread-preview");
+        const notification = thread.querySelector(`.notification-count.msg`)
+
+        preview.textContent = `${message.messages[messages.length - 1].text.substring(0, 20)}...`;
+        time.textContent = `${message.messages[messages.length - 1].time}`;
+        notification.textContent = message.supportUnreadMessages;
+      } else {
+        alert("no thread found")
+      }
+    }
+  } catch (err) {
+    alert("error updating chat-thread");
+    console.log(err)
+  }
+
+}
+
+
+
 // Render Chat Threads
 async function renderChatThreads(data) {
   try {
@@ -268,7 +295,7 @@ async function renderChatThreads(data) {
                 <div class="chat-thread-info">
                     <span class="chat-thread-name">${chat.admin.name.substring(0, 20)}</span>
                     <span class="chat-thread-preview">${chat.messages.length ? chat.messages[chat.messages.length - 1].text.substring(0, 20) + "..." : ""}</span >
-                     ${chat.userUnreadMessages ? `<span class="notification-count msg">${chat.userUnreadMessages}</span>` : ""}
+                    <span class="notification-count msg ${chat._id}" style="${chat.userUnreadMessages ? '' : 'display: none;'}" >${chat.userUnreadMessages ? chat.userUnreadMessages : ''}</span>
                 </div>
                 <span class="chat-thread-time">${chat.messages.length ? chat.messages[chat.messages.length - 1].time : ""}</span>
             `;
@@ -408,8 +435,9 @@ function sendMessage() {
 socket.on('message', function(msg) {
   const activeThread = document.querySelector(".chat-thread.active");
   if (!activeThread) {
-    console.log("No chat selected");
-    alert("no chat selected")
+    const chat = chats.find(c => c._id === msg.room);
+    chat.messages.push(msg.message);
+    updateChatThread(msg.room, msg.message)
     return;
   }
 
@@ -447,11 +475,8 @@ socket.on("activity", () => {
 })
 
 
-socket.on("newNotification", ({ userUnreadMessages }) => {
-  const notification = document.querySelector(".notification-count.msg")
-  if (notification) {
-    notification.textContent = userUnreadMessages;
-  }
+socket.on("newNotification", ({ existingChat, id }) => {
+  updateNotifications(id, existingChat)
 })
 
 
