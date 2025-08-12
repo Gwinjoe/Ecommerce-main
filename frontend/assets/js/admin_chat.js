@@ -254,7 +254,7 @@ function updateChatThread(chatId, message) {
   }
 }
 
-function updateNotifications(chatId, notifications) {
+function updateNotifications(chatId, notifications = 0) {
   try {
     if (chatId) {
       const thread = document.querySelector(`[data-id="${chatId}"]`);
@@ -262,6 +262,7 @@ function updateNotifications(chatId, notifications) {
         const notification = thread.querySelector(`.notification-count.msg`)
 
         notification.textContent = notifications;
+        notification.style.display = notifications == 0 ? "none" : "flex";
       } else {
         alert("no thread found")
       }
@@ -365,6 +366,7 @@ chatList.addEventListener("click", (e) => {
     thread.classList.add("active");
     const chatId = thread.getAttribute("data-id");
     renderMessages(chatId);
+    updateNotifications(chatId)
     if (window.innerWidth <= 768) {
       chatSidebar.classList.remove("active");
       gsap.to(chatSidebar, {

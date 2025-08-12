@@ -80,7 +80,6 @@ module.exports = function(server, sessionMiddleware) {
 
     socket.on('message', async (msg) => {
       const roomId = msg.room;
-      console.log(roomId);
       const message = buildMsg(msg.sender, msg.text)
 
 
@@ -110,7 +109,6 @@ module.exports = function(server, sessionMiddleware) {
       const sender = isAdmin ? "user" : "support";
       const existingRoom = await Chats.findById(id)
       if (!existingRoom) {
-        console.log("no existing room so we got the fuck outta the function")
         return;
       }
 

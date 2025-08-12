@@ -61,7 +61,6 @@ chatSchema.virtual("supportUnreadMessages").get(function() {
     return 0;
   }
   const messagesCount = this.messages.filter((message) => message.read === false && message.sender === "user").length;
-  console.log(messagesCount);
   return messagesCount;
 })
 
