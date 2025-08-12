@@ -255,19 +255,14 @@ function updateChatThread(chatId, message) {
 }
 
 
-function updateNotifications(chatId, message) {
+function updateNotifications(chatId, notifications) {
   try {
     if (chatId) {
       const thread = document.querySelector(`[data-id="${chatId}"]`);
       if (thread) {
-        const name = thread.querySelector(".chat-thread-name");
-        const time = thread.querySelector(".chat-thread-time");
-        const preview = thread.querySelector(".chat-thread-preview");
         const notification = thread.querySelector(`.notification-count.msg`)
 
-        preview.textContent = `${message.messages[messages.length - 1].text.substring(0, 20)}...`;
-        time.textContent = `${message.messages[messages.length - 1].time}`;
-        notification.textContent = message.supportUnreadMessages;
+        notification.textContent = notifications;
       } else {
         alert("no thread found")
       }
@@ -295,7 +290,7 @@ async function renderChatThreads(data) {
                 <div class="chat-thread-info">
                     <span class="chat-thread-name">${chat.admin.name.substring(0, 20)}</span>
                     <span class="chat-thread-preview">${chat.messages.length ? chat.messages[chat.messages.length - 1].text.substring(0, 20) + "..." : ""}</span >
-                    <span class="notification-count msg ${chat._id}" style="${chat.userUnreadMessages ? '' : 'display: none;'}" >${chat.userUnreadMessages ? chat.userUnreadMessages : ''}</span>
+                    <span class="notification-count msg" style="${chat.userUnreadMessages ? '' : 'display: none;'}" >${chat.userUnreadMessages ? chat.userUnreadMessages : ''}</span>
                 </div>
                 <span class="chat-thread-time">${chat.messages.length ? chat.messages[chat.messages.length - 1].time : ""}</span>
             `;
@@ -475,8 +470,8 @@ socket.on("activity", () => {
 })
 
 
-socket.on("newNotification", ({ existingChat, id }) => {
-  updateNotifications(id, existingChat)
+socket.on("newNotification", ({ userUnreadMessages, id }) => {
+  updateNotifications(id, userUnreadMessages)
 })
 
 
