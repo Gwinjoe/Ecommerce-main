@@ -5,7 +5,7 @@ gsap.registerPlugin(ScrollTrigger);
 import showStatusModal from "./modal.js"
 import { loadingIndicator } from "./loader.js";
 
-const response = await fetch("http://localhost:3500/api/users")
+const response = await fetch("/api/users")
 const results = await response.json();
 const users = results.data
 
