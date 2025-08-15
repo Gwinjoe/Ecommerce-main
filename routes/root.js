@@ -7,7 +7,7 @@ const { makeActive } = require("../controllers/authController")
 // root routes
 
 router.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "..", "frontend", "root.html"));
+  res.sendFile(path.join(__dirname, "..", "frontend", "roots.html"));
 });
 
 router.get("/", (req, rex) => {

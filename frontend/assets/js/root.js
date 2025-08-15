@@ -1,4 +1,3 @@
-// Utility function for API requests
 async function fetchData(endpoint) {
   try {
     const response = await fetch(endpoint);
@@ -13,38 +12,44 @@ async function fetchData(endpoint) {
   }
 }
 
-// DOM elements
-const elements = {
-  categoryGrid: document.querySelector('.categories-grid .grid'),
-  productGrid: document.getElementById('productGrid'),
-  brandSwiperWrapper: document.querySelector('.mySwiper .swiper-wrapper'),
-  recentSwiperWrapper: document.querySelector('.recent-swiper .swiper-wrapper'),
-  categoryDropdown: document.querySelector('.dropdown-options'),
-  loadMoreBtn: document.getElementById('loadMoreBtn'),
-  cartCount: document.querySelector('.cart-count')
-};
-
-// Global variables
 let allProducts = [];
 let allCategories = [];
 let allBrands = [];
+let filteredProducts = [];
+let visibleProducts = 6;
+let activeCategory = 'all';
+let brandSwiper, recentSwiper;
 
-// Initialize application
+const elements = {
+  categoryGrid: document.getElementById('categoriesGrid'),
+  productGrid: document.getElementById('productGrid'),
+  brandSwiperWrapper: document.getElementById('brandSwiperWrapper'),
+  recentSwiperWrapper: document.getElementById('recentSwiperWrapper'),
+  categoryDropdown: document.querySelector('.dropdown-options'),
+  loadMoreBtn: document.getElementById('loadMoreBtn'),
+  cartCount: document.querySelector('.cart-count'),
+  activeFilterBadge: document.getElementById('activeFilterBadge')
+};
+
 async function initApp() {
-  // Fetch data from APIs
-  allCategories = await fetchData('/api/categories');
-  allProducts = await fetchData('/api/products');
-  allBrands = await fetchData('/api/brands');
+  elements.productGrid.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
 
-  // Render all components
-  renderCategories();
-  renderProducts();
-  renderBrandFeature();
-  renderRecentProducts();
+  try {
+    allCategories = await fetchData('/api/categories');
+    allProducts = await fetchData('/api/products');
+    allBrands = await fetchData('/api/brands');
 
-  // Initialize event listeners
-  initEventListeners();
-  initSwipers();
+    renderCategories();
+    renderProducts();
+    renderBrandFeature();
+    renderRecentProducts();
+
+    initEventListeners();
+    initSwipers();
+  } catch (error) {
+    console.error('Error initializing app:', error);
+
+  }
 }
 
 // Render categories in grid and dropdown
@@ -94,16 +99,16 @@ function createProductCard(product) {
   const rating = product.ratings?.$numberDecimal || 0;
 
   return `
-    <div class="product-card animate-fade" data-category="${product.category?._id || ''}">
-      <img src="${product.images?.mainImage?.url || 'assets/images/default-product.png'}" alt="${product.name}">
-      <h4>${product.name}</h4>
-      <p class="price">${formattedPrice}</p>
-      <div class="card-bottom">
-        <div class="rating"><i class="fas fa-star"></i> ${rating}</div>
-        <button class="btn-cart" type="button" data-id="${product._id}">Add To Cart</button>
-      </div>
-    </div>
-  `;
+                <div class="product-card animate-fade" data-category="${product.category?._id || ''}">
+                    <img src="${product.images?.mainImage?.url || 'assets/images/default-product.png'}" alt="${product.name}">
+                    <h4>${product.name}</h4>
+                    <p class="price">${formattedPrice}</p>
+                    <div class="card-bottom">
+                        <div class="rating"><i class="fas fa-star"></i> ${rating}</div>
+                        <button class="btn-cart" type="button" data-id="${product._id}">Add To Cart</button>
+                    </div>
+                </div>
+            `;
 }
 
 // Create swiper slide HTML
@@ -118,16 +123,16 @@ function createSwiperSlide(product) {
   const rating = product.ratings?.$numberDecimal || 0;
 
   return `
-    <div class="swiper-slide product-card" data-category="${product.category?._id || ''}">
-      <img src="${product.images?.mainImage?.url || 'assets/images/default-product.png'}" alt="${product.name}">
-      <h4>${product.name}</h4>
-      <p class="price">${formattedPrice}</p>
-      <div class="card-bottom">
-        <span class="rating">⭐ ${rating}</span>
-        <button class="btn btn-cart" type="button" data-id="${product._id}">Add To Cart</button>
-      </div>
-    </div>
-  `;
+                <div class="swiper-slide product-card" data-category="${product.category?._id || ''}">
+                    <img src="${product.images?.mainImage?.url || 'assets/images/default-product.png'}" alt="${product.name}">
+                    <h4>${product.name}</h4>
+                    <p class="price">${formattedPrice}</p>
+                    <div class="card-bottom">
+                        <span class="rating">⭐ ${rating}</span>
+                        <button class="btn btn-cart" type="button" data-id="${product._id}">Add To Cart</button>
+                    </div>
+                </div>
+            `;
 }
 
 // Create recent product slide HTML
@@ -142,18 +147,18 @@ function createRecentSlide(product) {
   const rating = product.ratings?.$numberDecimal || 0;
 
   return `
-    <div class="swiper-slide">
-      <div class="product-card">
-        <img src="${product.images?.mainImage?.url || 'assets/images/default-product.png'}" alt="${product.name}">
-        <h4>${product.name}</h4>
-        <div class="price">${formattedPrice}</div>
-        <div class="card-bottom">
-          <span class="rating">★ ${rating}</span>
-          <button class="btn-cart" type="button" data-id="${product._id}">Add To Cart</button>
-        </div>
-      </div>
-    </div>
-  `;
+                <div class="swiper-slide">
+                    <div class="product-card">
+                        <img src="${product.images?.mainImage?.url || 'assets/images/default-product.png'}" alt="${product.name}">
+                        <h4>${product.name}</h4>
+                        <div class="price">${formattedPrice}</div>
+                        <div class="card-bottom">
+                            <span class="rating">★ ${rating}</span>
+                            <button class="btn-cart" type="button" data-id="${product._id}">Add To Cart</button>
+                        </div>
+                    </div>
+                </div>
+            `;
 }
 
 // Render products in featured section
@@ -162,30 +167,59 @@ function renderProducts() {
 
   if (allProducts.length === 0) {
     elements.productGrid.innerHTML = `
-      <div class="no-products">
-        <i class="fas fa-tools"></i>
-        <p>No products found</p>
-      </div>
-    `;
+                    <div class="no-products">
+                        <i class="fas fa-tools"></i>
+                        <p>No products found</p>
+                    </div>
+                `;
     return;
   }
 
-  // Add initial products (first 6)
-  allProducts.slice(0, 6).forEach(product => {
+  // Filter products based on active category
+  if (activeCategory === 'all') {
+    filteredProducts = [...allProducts];
+  } else {
+    filteredProducts = allProducts.filter(product =>
+      product.category?._id === activeCategory
+    );
+  }
+
+  // Update active filter badge
+  if (activeCategory !== 'all') {
+    const activeCategoryObj = allCategories.find(cat => cat._id === activeCategory);
+    elements.activeFilterBadge.textContent = activeCategoryObj?.name || '';
+  } else {
+    elements.activeFilterBadge.textContent = '';
+  }
+
+  // Check if no products in this category
+  if (filteredProducts.length === 0) {
+    elements.productGrid.innerHTML = `
+                    <div class="error-message">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <p>No products found in this category</p>
+                    </div>
+                `;
+    elements.loadMoreBtn.style.display = 'none';
+    return;
+  }
+
+  // Add initial products
+  const productsToShow = filteredProducts.slice(0, visibleProducts);
+
+  productsToShow.forEach(product => {
     elements.productGrid.innerHTML += createProductCard(product);
   });
 
-  // Add hidden products (rest)
-  allProducts.slice(6).forEach(product => {
-    const card = document.createElement('div');
-    card.className = 'product-card animate-fade hidden';
-    card.dataset.category = product.category?._id || '';
-    card.innerHTML = createProductCard(product).replace('class="product-card', '');
-    elements.productGrid.appendChild(card);
-  });
-
   // Update load more button
-  elements.loadMoreBtn.style.display = allProducts.length > 6 ? 'block' : 'none';
+  if (filteredProducts.length > visibleProducts) {
+    elements.loadMoreBtn.style.display = 'block';
+  } else {
+    elements.loadMoreBtn.style.display = 'none';
+  }
+
+  // Animate visible cards
+  animateProductCards();
 }
 
 // Render brand feature section
@@ -207,6 +241,12 @@ function renderBrandFeature() {
   brandProducts.slice(0, 3).forEach(product => {
     elements.brandSwiperWrapper.innerHTML += createSwiperSlide(product);
   });
+
+  // Reinitialize swiper
+  if (brandSwiper) {
+    brandSwiper.destroy(true, true);
+  }
+  initBrandSwiper();
 }
 
 // Render recent products
@@ -220,12 +260,17 @@ function renderRecentProducts() {
   recentProducts.forEach(product => {
     elements.recentSwiperWrapper.innerHTML += createRecentSlide(product);
   });
+
+  // Reinitialize swiper
+  if (recentSwiper) {
+    recentSwiper.destroy(true, true);
+  }
+  initRecentSwiper();
 }
 
 // Initialize swiper sliders
-function initSwipers() {
-  // Main brand swiper
-  window.brandSwiper = new Swiper(".mySwiper", {
+function initBrandSwiper() {
+  brandSwiper = new Swiper(".mySwiper", {
     slidesPerView: 1.2,
     spaceBetween: 20,
     loop: true,
@@ -245,9 +290,10 @@ function initSwipers() {
       },
     },
   });
+}
 
-  // Recent products swiper
-  window.recentSwiper = new Swiper(".recent-swiper", {
+function initRecentSwiper() {
+  recentSwiper = new Swiper(".recent-swiper", {
     slidesPerView: 1,
     spaceBetween: 20,
     loop: true,
@@ -277,22 +323,15 @@ function initSwipers() {
 function initEventListeners() {
   // Load more button
   elements.loadMoreBtn?.addEventListener('click', () => {
-    const hiddenCards = document.querySelectorAll('.product-card.hidden');
-    const toShow = Math.min(6, hiddenCards.length);
-
-    for (let i = 0; i < toShow; i++) {
-      hiddenCards[i].classList.remove('hidden');
-    }
-
-    if (document.querySelectorAll('.product-card.hidden').length === 0) {
-      elements.loadMoreBtn.style.display = 'none';
-    }
+    visibleProducts += 6;
+    renderProducts();
   });
 
   // Category filtering
   document.querySelectorAll('.cat-box').forEach(box => {
     box.addEventListener('click', () => {
-      const filter = box.dataset.filter;
+      activeCategory = box.dataset.filter;
+      visibleProducts = 6; // Reset visible products
 
       // Update active class
       document.querySelectorAll('.cat-box').forEach(b => b.classList.remove('active'));
@@ -302,14 +341,15 @@ function initEventListeners() {
       document.querySelector('.dropdown-selected').textContent = box.textContent;
 
       // Filter products
-      filterProducts(filter);
+      renderProducts();
     });
   });
 
   // Dropdown filtering
   document.querySelectorAll('.dropdown-options li').forEach(option => {
     option.addEventListener('click', () => {
-      const filter = option.dataset.value;
+      activeCategory = option.dataset.value;
+      visibleProducts = 6; // Reset visible products
 
       // Update dropdown
       document.querySelector('.dropdown-selected').textContent = option.textContent;
@@ -317,13 +357,13 @@ function initEventListeners() {
       // Update active category box
       document.querySelectorAll('.cat-box').forEach(box => {
         box.classList.remove('active');
-        if (box.dataset.filter === filter) {
+        if (box.dataset.filter === activeCategory) {
           box.classList.add('active');
         }
       });
 
       // Filter products
-      filterProducts(filter);
+      renderProducts();
     });
   });
 
@@ -341,69 +381,33 @@ function initEventListeners() {
   });
 }
 
-// Filter products by category
-function filterProducts(categoryId) {
-  const productCards = document.querySelectorAll('#productGrid .product-card');
-
-  productCards.forEach(card => {
-    if (categoryId === 'all' || card.dataset.category === categoryId) {
-      card.style.display = 'block';
-    } else {
-      card.style.display = 'none';
-    }
-  });
-
-  // Update swipers
-  if (window.brandSwiper) window.brandSwiper.update();
-}
-
 // Search products
 function searchProducts() {
-  const query = document.getElementById('searchInput').value.toLowerCase().trim();
+  const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
 
-  if (!query) {
-    // Show all products if search is empty
-    document.querySelectorAll('#productGrid .product-card').forEach(card => {
-      card.style.display = 'block';
+  if (keyword === '') {
+    // Reset to all products
+    activeCategory = 'all';
+    visibleProducts = 6;
+    document.querySelectorAll('.cat-box').forEach(b => {
+      b.classList.remove('active');
+      if (b.dataset.filter === 'all') b.classList.add('active');
     });
+    document.querySelector('.dropdown-selected').textContent = 'All Categories';
+    renderProducts();
     return;
   }
 
-  let found = false;
+  // Filter products by keyword
+  filteredProducts = allProducts.filter(product =>
+    product.name.toLowerCase().includes(keyword) ||
+    (product.description && product.description.toLowerCase().includes(keyword))
+  );
 
-  document.querySelectorAll('#productGrid .product-card').forEach(card => {
-    const name = card.querySelector('h4').textContent.toLowerCase();
-    const description = card.querySelector('.price').textContent.toLowerCase();
-
-    if (name.includes(query) || description.includes(query)) {
-      card.style.display = 'block';
-      found = true;
-    } else {
-      card.style.display = 'none';
-    }
-  });
-
-  // Show message if no results
-  const feedback = document.getElementById('search-feedback');
-  if (!found) {
-    if (!feedback) {
-      const feedbackEl = document.createElement('div');
-      feedbackEl.id = 'search-feedback';
-      feedbackEl.textContent = 'No products found matching your search.';
-      feedbackEl.style.cssText = `
-        color: #e74c3c;
-        font-weight: bold;
-        margin-top: 10px;
-        text-align: center;
-        padding: 10px;
-        background: #f8d7da;
-        border-radius: 4px;
-      `;
-      document.querySelector('.search-bar').appendChild(feedbackEl);
-    }
-  } else if (feedback) {
-    feedback.remove();
-  }
+  // Update UI
+  elements.activeFilterBadge.textContent = `Search: "${keyword}"`;
+  visibleProducts = 6;
+  renderProducts();
 }
 
 // Add to cart functionality
@@ -425,7 +429,7 @@ function addToCart(productId) {
       id: productId,
       name: product.name,
       price: product.price?.$numberDecimal || product.price,
-      image: product.images?.mainImage?.url || 'assets/images/default-product.png',
+      image: product.images?.mainImage?.url,
       quantity: 1
     });
   }
@@ -452,8 +456,8 @@ function showAddToCartFeedback() {
   const feedback = document.createElement('div');
   feedback.className = 'cart-feedback';
   feedback.innerHTML = `
-    <i class="fas fa-check-circle"></i> Added to cart!
-  `;
+                <i class="fas fa-check-circle"></i> Added to cart!
+            `;
 
   document.body.appendChild(feedback);
 
@@ -469,6 +473,20 @@ function showAddToCartFeedback() {
   }, 2000);
 }
 
+// Animate product cards
+function animateProductCards() {
+  const productCards = document.querySelectorAll('.product-card.animate-fade');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.1 });
+
+  productCards.forEach(card => observer.observe(card));
+}
+
 // Initialize the app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
   // Initialize app
@@ -482,7 +500,6 @@ document.addEventListener('DOMContentLoaded', () => {
   initSmoothScroll();
   initDropdown();
   initScrollReveal();
-  initSearch();
   initScrollToTop();
   updateYear();
 });
@@ -553,10 +570,6 @@ function initScrollReveal() {
   document.querySelectorAll(".animate-fade-in, .animate-up").forEach(el => observer.observe(el));
 }
 
-function initSearch() {
-  // Handled in initEventListeners
-}
-
 function initScrollToTop() {
   const scrollTopBtn = document.getElementById("scrollTopBtn");
 
@@ -571,6 +584,32 @@ function initScrollToTop() {
   });
 }
 
+// footer section
+// Reveal on scroll
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.animate-fade').forEach(el => observer.observe(el));
+
+// Scroll to Top Button
+const scrollTopBtn = document.getElementById("scrollTopBtn");
+
+window.onscroll = function() {
+  scrollTopBtn.style.display = (document.documentElement.scrollTop > 300) ? "block" : "none";
+};
+
+scrollTopBtn.onclick = function() {
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
+
+
+
 function updateYear() {
   document.getElementById("year").textContent = new Date().getFullYear();
 }
+

@@ -1253,30 +1253,6 @@ header {
     background: #d47518;
 }
 
-/* Add to cart feedback */
-.cart-feedback {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background: #27ae60;
-  color: white;
-  padding: 15px 25px;
-  border-radius: 50px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  z-index: 1000;
-  opacity: 0;
-  transform: translateY(20px);
-  transition: all 0.3s ease;
-}
-
-.cart-feedback.show {
-  opacity: 1;
-  transform: translateY(0);
-}
-
 /* No products message */
 .no-products {
   grid-column: 1 / -1;
@@ -1306,6 +1282,76 @@ header {
   border-radius: 4px;
 }
 
+      /* Add to cart feedback */
+    .cart-feedback {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #27ae60;
+      color: white;
+      padding: 15px 25px;
+      border-radius: 50px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 1000;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.3s ease;
+    }
+
+    .cart-feedback.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Loading spinner */
+    .loading-spinner {
+      display: flex;
+      justify-content: center;
+      padding: 30px;
+    }
+
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 5px solid rgba(0, 0, 0, 0.1);
+      border-radius: 50%;
+      border-top: 5px solid var(--primary-color);
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* Error message */
+    .error-message {
+      color: #e74c3c;
+      font-weight: bold;
+      padding: 20px;
+      text-align: center;
+      background: #f8d7da;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+
+    /* Category filtering badge */
+    .active-filter {
+      background-color: var(--primary-color);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      margin-left: 10px;
+    }
 
 /* Animation */
 /* Duplicate .animate-fade selector removed to avoid conflicts */
