@@ -318,6 +318,7 @@ header {
     opacity: 0;
     transition: max-height 0.3s ease, opacity 0.3s ease;
     z-index: 10;
+    overflow: scroll;
 }
 
 .custom-dropdown.open .dropdown-options {
@@ -1251,6 +1252,60 @@ header {
 #scrollTopBtn:hover {
     background: #d47518;
 }
+
+/* Add to cart feedback */
+.cart-feedback {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: #27ae60;
+  color: white;
+  padding: 15px 25px;
+  border-radius: 50px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 1000;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s ease;
+}
+
+.cart-feedback.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* No products message */
+.no-products {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.no-products i {
+  font-size: 48px;
+  color: #ddd;
+  margin-bottom: 20px;
+}
+
+.no-products p {
+  font-size: 18px;
+  color: #777;
+}
+
+/* Search feedback */
+#search-feedback {
+  color: #e74c3c;
+  font-weight: bold;
+  margin-top: 10px;
+  text-align: center;
+  padding: 10px;
+  background: #f8d7da;
+  border-radius: 4px;
+}
+
 
 /* Animation */
 /* Duplicate .animate-fade selector removed to avoid conflicts */
