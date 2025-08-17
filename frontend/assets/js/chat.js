@@ -345,7 +345,19 @@ function renderMessages(chatId) {
       chatMessages.appendChild(messageEl);
     });
     chatMessages.scrollTop = chatMessages.scrollHeight;
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
 
+=======
+    //
+>>>>>>> Stashed changes
+=======
+    //
+>>>>>>> Stashed changes
+=======
+    //
+>>>>>>> Stashed changes
     // gsap.from(".message", {
     //   opacity: 0,
     //   y: 10,
@@ -449,7 +461,6 @@ socket.on("updateMessage", (msg) => {
       message.read = true;
     }
   })
-  renderMessages(msg.room)
 })
 
 let count = 0;
