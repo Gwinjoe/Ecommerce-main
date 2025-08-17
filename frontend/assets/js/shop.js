@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
       maxPrice: 1000000,
       sort: 'default'
     },
-    absoluteMaxPrice: 1000000  // New property to store calculated max price
+    absoluteMaxPrice: 1000000
   };
 
   const debounce = (func, wait) => {
@@ -106,16 +106,13 @@ document.addEventListener('DOMContentLoaded', () => {
     state.brands = await fetchData('/api/brands');
     state.products = await fetchData('/api/products');
 
-    // Calculate max price from products
     if (state.products.length > 0) {
       const maxPrice = Math.max(...state.products.map(p => getNumericValue(p.price)));
-      // Round up to nearest 100
       state.absoluteMaxPrice = Math.ceil(maxPrice / 100) * 100;
     } else {
-      state.absoluteMaxPrice = 1000000; // Default if no products
+      state.absoluteMaxPrice = 1000000;
     }
 
-    // Update price filter settings
     state.currentFilters.maxPrice = state.absoluteMaxPrice;
     elements.priceMax.max = state.absoluteMaxPrice;
     elements.priceMin.max = state.absoluteMaxPrice;
@@ -160,7 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderProducts();
     updateCartCount();
     updateFilterSummary();
-    updatePriceDisplay(); // Ensure price displays update
+    updatePriceDisplay();
   };
 
   const renderProducts = () => {
@@ -482,7 +479,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 10);
   };
 
-  // Add to cart helper function
   const addToCart = (productId, quantity = 1) => {
     const product = state.products.find(p => p._id === productId);
     if (!product) return;
@@ -527,13 +523,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!product) return;
 
-    // Add to cart
     if (e.target.closest('.add-to-cart')) {
       addToCart(productId);
       e.stopPropagation();
     }
 
-    // Quick view
     if (e.target.closest('.quick-view')) {
       elements.modalImage.src = product.images?.mainImage?.url || 'assets/images/default-product.png';
       elements.modalImage.alt = product.name;
@@ -556,7 +550,6 @@ document.addEventListener('DOMContentLoaded', () => {
       elements.modalAddToCart.dataset.id = productId;
       elements.quickViewModal.style.display = 'flex';
 
-      // Update recently viewed
       state.recentlyViewedList = state.recentlyViewedList.filter(id => id !== productId);
       state.recentlyViewedList.unshift(productId);
       if (state.recentlyViewedList.length > 5) state.recentlyViewedList.pop();
@@ -584,7 +577,6 @@ document.addEventListener('DOMContentLoaded', () => {
     elements.quickViewModal.style.display = 'none';
   });
 
-  // Update filters
   const updateFilters = () => {
     state.currentFilters.search = elements.searchInput.value;
     state.currentFilters.sort = elements.sortPrice.value;

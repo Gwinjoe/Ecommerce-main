@@ -1,108 +1,364 @@
 import { gsap } from "gsap";
 
 document.addEventListener("DOMContentLoaded", () => {
-    const form = document.querySelector(".checkout-form");
-    const placeOrderBtn = document.querySelector(".btn-place-order");
-    const couponInput = document.querySelector("#coupon-code");
-    const applyCouponBtn = document.querySelector(".btn-apply-coupon");
-    const subtotalElement = document.querySelector(".summary-subtotal");
-    const discountElement = document.querySelector(".summary-discount");
-    const totalElement = document.querySelector(".summary-total");
+  // Elements
+  const form = document.querySelector(".checkout-form");
+  const placeOrderBtn = document.querySelector(".btn-place-order");
+  const couponInput = document.querySelector("#coupon-code");
+  const applyCouponBtn = document.querySelector(".btn-apply-coupon");
+  const subtotalElement = document.querySelector(".summary-subtotal");
+  const discountElement = document.querySelector(".summary-discount");
+  const totalElement = document.querySelector(".summary-total");
+  const summaryItems = document.querySelector(".summary-items");
+  const shippingElement = document.querySelector(".shipping-fee");
+  const cartCount = document.querySelector('.cart-count');
+  const loader = document.createElement("div");
+  loader.className = "checkout-loader";
+  loader.innerHTML = `
+        <div class="spinner"></div>
+        <p>Processing your order...</p>
+    `;
 
-    // Coupon application logic (placeholder)
-    applyCouponBtn.addEventListener("click", () => {
-        const couponCode = couponInput.value.trim();
-        if (couponCode) {
-            // Simulate a 10% discount for demo purposes
-            const subtotal = parseFloat(subtotalElement.textContent.replace("$", ""));
-            const discount = subtotal * 0.1; // 10% discount
-            const newTotal = subtotal - discount + 10.00; // Add fixed shipping
-            discountElement.textContent = `$${discount.toFixed(2)}`;
-            totalElement.textContent = `$${newTotal.toFixed(2)}`;
-            gsap.to(".summary-details", {
-                scale: 1.05,
-                duration: 0.2,
-                yoyo: true,
-                repeat: 1
-            });
-            alert(`Coupon "${couponCode}" applied! Discount: $${discount.toFixed(2)}`);
-            couponInput.value = ""; // Clear input
-        } else {
-            gsap.to(couponInput, {
-                borderColor: "#e63946",
-                duration: 0.3,
-                yoyo: true,
-                repeat: 1
-            });
-            alert("Please enter a valid coupon code.");
+  // State
+  let cart = JSON.parse(localStorage.getItem('cart')) || [];
+  let discount = 0;
+  let discountType = null;
+  const shippingCost = 1000.00;
+  let currentUser = null; // Store user data
+
+  // Nigerian currency formatter
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-NG', {
+      style: 'currency',
+      currency: 'NGN',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(amount);
+  };
+
+  // Fetch current user
+  const fetchCurrentUser = async () => {
+    try {
+      const response = await fetch('/api/user');
+      const data = await response.json();
+
+      if (data.success) {
+        currentUser = data.data;
+        // Pre-fill form with user data if available
+        if (currentUser) {
+          document.getElementById('full-name').value = currentUser.name || '';
+          document.getElementById('email').value = currentUser.email || '';
+          document.getElementById('address').value = currentUser.address || '';
+          document.getElementById('city').value = currentUser.city || '';
+          document.getElementById('postal-code').value = currentUser.postalCode || '';
         }
+      }
+    } catch (error) {
+      console.error('Error fetching user:', error);
+    }
+  };
+
+  const updateCartCount = () => {
+    const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+    cartCount.textContent = totalItems;
+  };
+
+  // Calculate totals
+  const calculateTotals = () => {
+    const subtotal = cart.reduce((sum, item) => {
+      return sum + (parseFloat(item.price) * (item.quantity || 1));
+    }, 0);
+
+    let discountAmount = 0;
+    if (discountType === 'percentage') {
+      discountAmount = subtotal * (discount / 100);
+    } else if (discountType === 'fixed') {
+      discountAmount = discount;
+    }
+
+    const total = subtotal - discountAmount + shippingCost;
+
+    return {
+      subtotal,
+      discountAmount,
+      total
+    };
+  };
+
+  const updateOrderSummary = () => {
+    const totals = calculateTotals();
+
+    subtotalElement.textContent = formatCurrency(totals.subtotal);
+    discountElement.textContent = formatCurrency(totals.discountAmount);
+    totalElement.textContent = formatCurrency(totals.total);
+    shippingElement.textContent = formatCurrency(shippingCost);
+  };
+
+  const renderOrderItems = () => {
+    summaryItems.innerHTML = '';
+
+    cart.forEach(item => {
+      const price = parseFloat(item.price);
+      const quantity = item.quantity || 1;
+      const itemTotal = price * quantity;
+
+      const summaryItem = document.createElement("div");
+      summaryItem.className = "summary-item";
+      summaryItem.innerHTML = `
+                <img src="${item.image || 'assets/images/product-placeholder.jpg'}" 
+                     alt="${item.name}" class="summary-item-img">
+                <div class="summary-item-details">
+                    <h5>${item.name}</h5>
+                    <p>Qty: ${quantity}</p>
+                    <p>${formatCurrency(itemTotal)}</p>
+                </div>
+            `;
+      summaryItems.appendChild(summaryItem);
     });
 
-    // Form validation
-    placeOrderBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        const inputs = form.querySelectorAll("input[required]");
-        let isValid = true;
+    // Animate items
+    gsap.from(".summary-item", {
+      opacity: 0,
+      y: 30,
+      duration: 0.8,
+      stagger: 0.2,
+      scrollTrigger: {
+        trigger: ".summary-items",
+        start: "top 80%",
+        toggleActions: "play none none none"
+      }
+    });
 
-        inputs.forEach(input => {
-            if (!input.value.trim()) {
-                isValid = false;
-                gsap.to(input, {
-                    borderColor: "#e63946",
-                    duration: 0.3,
-                    yoyo: true,
-                    repeat: 1
-                });
-            }
+    updateOrderSummary();
+  };
+
+  const applyCoupon = async () => {
+    const couponCode = couponInput.value.trim();
+    if (!couponCode) {
+      gsap.to(couponInput, {
+        borderColor: "#e63946",
+        duration: 0.3,
+        yoyo: true,
+        repeat: 1
+      });
+      alert("Please enter a coupon code");
+      return;
+    }
+
+    try {
+      applyCouponBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Applying...';
+      applyCouponBtn.disabled = true;
+
+      const response = await fetch("/api/coupon", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ couponCode })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        discount = data.discount;
+        discountType = data.type;
+
+        updateOrderSummary();
+        gsap.to(".summary-details", {
+          scale: 1.05,
+          duration: 0.2,
+          yoyo: true,
+          repeat: 1
         });
 
-        if (isValid) {
-            gsap.to(placeOrderBtn, {
-                scale: 0.95,
-                duration: 0.1,
-                yoyo: true,
-                repeat: 1,
-                onComplete: () => {
-                    alert("Order placed successfully!");
-                }
-            });
-        } else {
-            alert("Please fill in all required fields.");
+        alert(`Coupon applied successfully! Discount: ${discountType === 'percentage' ? discount + '%' : formatCurrency(discount)}`);
+      } else {
+        alert(data.message || "Invalid coupon code");
+      }
+    } catch (error) {
+      console.error("Coupon error:", error);
+      alert("Failed to apply coupon. Please try again.");
+    } finally {
+      applyCouponBtn.innerHTML = '<i class="fas fa-ticket-alt"></i> Apply';
+      applyCouponBtn.disabled = false;
+    }
+  };
+
+  // Complete order after successful payment
+  const completeOrder = async (paymentReference, transactionId) => {
+    try {
+      // Prepare order data
+      const orderData = {
+        customer: {
+          userId: currentUser?._id || null,
+          name: document.getElementById("full-name").value,
+          email: document.getElementById("email").value,
+          address: document.getElementById("address").value,
+          city: document.getElementById("city").value,
+          postalCode: document.getElementById("postal-code").value
+        },
+        items: cart,
+        coupon: couponInput.value.trim() || null,
+        totals: calculateTotals(),
+        payment: {
+          reference: paymentReference,
+          transactionId,
+          method: "flutterwave"
         }
+      };
+
+      // Send order to backend
+      const response = await fetch("/api/order", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(orderData)
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Clear cart and localStorage
+        cart = [];
+        localStorage.removeItem("cart");
+        updateCartCount();
+
+        // Redirect to success page
+        window.location.href = "/order-success.html";
+      } else {
+        throw new Error(data.message || "Failed to create order");
+      }
+    } catch (error) {
+      console.error("Order completion error:", error);
+      alert(`Error completing order: ${error.message}`);
+    } finally {
+      if (document.body.contains(loader)) {
+        document.body.removeChild(loader);
+      }
+      placeOrderBtn.disabled = false;
+    }
+  };
+
+  // Initialize Flutterwave payment
+  const initiatePayment = () => {
+    const totals = calculateTotals();
+    const customerName = document.getElementById("full-name").value;
+    const customerEmail = document.getElementById("email").value;
+
+    // Generate unique transaction reference
+    const txRef = `SWISS-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+    FlutterwaveCheckout({
+      public_key: "FLWPUBK_TEST-XXXXXXXXXXXXXXXXXXXX", // Replace with your public key
+      tx_ref: txRef,
+      amount: totals.total,
+      currency: "NGN",
+      payment_options: "card, banktransfer, ussd",
+      redirect_url: "", // Optional redirect URL
+      customer: {
+        email: customerEmail,
+        name: customerName,
+      },
+      customizations: {
+        title: "SWISSTools",
+        description: `Payment for ${cart.length} items`,
+        logo: "https://yourdomain.com/logo.png", // Replace with your logo
+      },
+      callback: function(response) {
+        if (response.status === "successful") {
+          completeOrder(txRef, response.transaction_id);
+        } else {
+          alert("Payment failed. Please try again.");
+          document.body.removeChild(loader);
+          placeOrderBtn.disabled = false;
+        }
+      },
+      onclose: function() {
+        // Payment modal closed
+        document.body.removeChild(loader);
+        placeOrderBtn.disabled = false;
+      }
+    });
+  };
+
+  // Handle place order button click
+  const placeOrder = () => {
+    const inputs = form.querySelectorAll("input[required]");
+    let isValid = true;
+
+    inputs.forEach(input => {
+      if (!input.value.trim()) {
+        isValid = false;
+        gsap.to(input, {
+          borderColor: "#e63946",
+          duration: 0.3,
+          yoyo: true,
+          repeat: 1
+        });
+      }
     });
 
-    // Animate form and summary on scroll
+    if (!isValid) {
+      alert("Please fill in all required fields.");
+      return;
+    }
+
+    if (cart.length === 0) {
+      alert("Your cart is empty. Please add items before placing an order.");
+      return;
+    }
+
+    try {
+      // Show loader
+      document.body.appendChild(loader);
+      placeOrderBtn.disabled = true;
+
+      // Initiate payment
+      initiatePayment();
+    } catch (error) {
+      console.error("Payment initiation error:", error);
+      alert(`Error initiating payment: ${error.message}`);
+
+      if (document.body.contains(loader)) {
+        document.body.removeChild(loader);
+      }
+      placeOrderBtn.disabled = false;
+    }
+  };
+
+  const initCheckout = async () => {
+    // Fetch user data first
+    await fetchCurrentUser();
+
+    // Then render the rest
+    renderOrderItems();
+    updateCartCount();
+    applyCouponBtn.addEventListener("click", applyCoupon);
+    placeOrderBtn.addEventListener("click", placeOrder);
+
     gsap.from(".checkout-form", {
-        opacity: 0,
-        y: 50,
-        duration: 1,
-        scrollTrigger: {
-            trigger: ".checkout-form",
-            start: "top 80%",
-            toggleActions: "play none none none"
-        }
+      opacity: 0,
+      y: 50,
+      duration: 1,
+      scrollTrigger: {
+        trigger: ".checkout-form",
+        start: "top 80%",
+        toggleActions: "play none none none"
+      }
     });
 
     gsap.from(".order-summary", {
-        opacity: 0,
-        x: 50,
-        duration: 1,
-        scrollTrigger: {
-            trigger: ".order-summary",
-            start: "top 80%",
-            toggleActions: "play none none none"
-        }
+      opacity: 0,
+      x: 50,
+      duration: 1,
+      scrollTrigger: {
+        trigger: ".order-summary",
+        start: "top 80%",
+        toggleActions: "play none none none"
+      }
     });
+  };
 
-    gsap.from(".summary-item", {
-        opacity: 0,
-        y: 30,
-        duration: 0.8,
-        stagger: 0.2,
-        scrollTrigger: {
-            trigger: ".summary-items",
-            start: "top 80%",
-            toggleActions: "play none none none"
-        }
-    });
+  initCheckout();
 });
