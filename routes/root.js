@@ -44,7 +44,7 @@ router.get("/product", isLoggedIn, (req, res) => {
 });
 
 router.get("/shop", isLoggedIn, (req, res) => {
-  res.sendFile(path.join(__dirname, "..", "frontend", "refshop.html"));
+  res.sendFile(path.join(__dirname, "..", "frontend", "shop.html"));
 });
 
 router.get("/chat", isLoggedIn, (req, res) => {
