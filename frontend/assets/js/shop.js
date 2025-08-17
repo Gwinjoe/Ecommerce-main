@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-  // DOM Elements
   const elements = {
     menuToggle: document.getElementById('menu-toggle'),
     navMenu: document.getElementById('nav-menu'),
@@ -37,17 +36,30 @@ document.addEventListener('DOMContentLoaded', () => {
     recentlyViewed: document.getElementById('recentlyViewed')
   };
 
-  // State Management
+
   let state = {
-    cart: JSON.parse(localStorage.getItem('cart') || '[]'),
-    wishlist: JSON.parse(localStorage.getItem('wishlist') || '[]'),
-    compareList: JSON.parse(localStorage.getItem('compare') || '[]'),
-    recentlyViewedList: JSON.parse(localStorage.getItem('recentlyViewed') || '[]'),
+    products: [],
+    categories: [],
+    brands: [],
+    cart: JSON.parse(localStorage.getItem('cart')) || [],
+    wishlist: JSON.parse(localStorage.getItem('wishlist')) || [],
+    compareList: JSON.parse(localStorage.getItem('compare')) || [],
+    recentlyViewedList: JSON.parse(localStorage.getItem('recentlyViewed')) || [],
     currentPage: 1,
-    itemsPerPage: 8
+    itemsPerPage: 8,
+    isGridView: true,
+    currentFilters: {
+      search: '',
+      category: 'all',
+      brand: 'all',
+      rating: 'all',
+      minPrice: 0,
+      maxPrice: 1000000,
+      sort: 'default'
+    },
+    absoluteMaxPrice: 1000000  // New property to store calculated max price
   };
 
-  // Utility Functions
   const debounce = (func, wait) => {
     let timeout;
     return (...args) => {
@@ -56,510 +68,560 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   };
 
-  // Safe localStorage access
-  const safeLocalStorage = {
-    get: (key) => {
-      try {
-        return JSON.parse(localStorage.getItem(key) || '[]');
-      } catch (e) {
-        console.error(`Error reading ${key} from localStorage:`, e);
-        return [];
+  const formatCurrency = (amount) => {
+    const value = amount?.$numberDecimal ? parseFloat(amount.$numberDecimal) : parseFloat(amount);
+
+    return `₦${value.toLocaleString('en-NG', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })}`;
+  };
+
+  const getNumericValue = (value) => {
+    if (value?.$numberDecimal) {
+      return parseFloat(value.$numberDecimal);
+    }
+    return parseFloat(value) || 0;
+  };
+
+  const fetchData = async (endpoint) => {
+    try {
+      elements.spinner.style.display = 'block';
+      const response = await fetch(endpoint);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    },
-    set: (key, value) => {
-      try {
-        localStorage.setItem(key, JSON.stringify(value));
-      } catch (e) {
-        console.error(`Error writing ${key} to localStorage:`, e);
-      }
+      const data = await response.json();
+      return data.success ? data.data : [];
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      return [];
+    } finally {
+      elements.spinner.style.display = 'none';
     }
   };
 
-  // Menu Toggle
-  const toggleMenu = () => {
-    elements.navMenu.classList.toggle('active');
-    elements.menuIcon.classList.toggle('fa-bars');
-    elements.menuIcon.classList.toggle('fa-times');
+  const initShop = async () => {
+    state.categories = await fetchData('/api/categories');
+    state.brands = await fetchData('/api/brands');
+    state.products = await fetchData('/api/products');
+
+    // Calculate max price from products
+    if (state.products.length > 0) {
+      const maxPrice = Math.max(...state.products.map(p => getNumericValue(p.price)));
+      // Round up to nearest 100
+      state.absoluteMaxPrice = Math.ceil(maxPrice / 100) * 100;
+    } else {
+      state.absoluteMaxPrice = 1000000; // Default if no products
+    }
+
+    // Update price filter settings
+    state.currentFilters.maxPrice = state.absoluteMaxPrice;
+    elements.priceMax.max = state.absoluteMaxPrice;
+    elements.priceMin.max = state.absoluteMaxPrice;
+    elements.priceMax.value = state.absoluteMaxPrice;
+
+    const categoryOptions = document.getElementById('categoryOptions');
+    state.categories.forEach(category => {
+      const option = document.createElement('div');
+      option.className = 'filter-option';
+      option.dataset.value = category._id;
+      option.textContent = category.name;
+      categoryOptions.appendChild(option);
+    });
+
+    const brandOptions = document.getElementById('brandOptions');
+    state.brands.forEach(brand => {
+      const option = document.createElement('div');
+      option.className = 'filter-option';
+      option.dataset.value = brand._id;
+      option.textContent = brand.name;
+      brandOptions.appendChild(option);
+    });
+
+    document.querySelectorAll('.filter-option').forEach(option => {
+      option.addEventListener('click', () => {
+        const container = option.parentElement;
+        const filterType = container.id.replace('Options', '');
+
+        container.querySelectorAll('.filter-option').forEach(opt => {
+          opt.classList.remove('active');
+        });
+
+        option.classList.add('active');
+
+        state.currentFilters[filterType] = option.dataset.value;
+        state.currentPage = 1;
+        renderProducts();
+        updateFilterSummary();
+      });
+    });
+
+    renderProducts();
+    updateCartCount();
+    updateFilterSummary();
+    updatePriceDisplay(); // Ensure price displays update
   };
 
-  // Update Cart Count
+  const renderProducts = () => {
+    elements.productGrid.innerHTML = '';
+    elements.noResults.style.display = 'none';
+
+    if (state.products.length === 0) {
+      elements.noResults.style.display = 'block';
+      elements.noResults.textContent = 'No products available. Please check back later.';
+      return;
+    }
+
+    let filteredProducts = applyFilters();
+
+
+    if (filteredProducts.length === 0) {
+      elements.noResults.style.display = 'block';
+      elements.noResults.textContent = 'No products found matching your criteria.';
+      return;
+    }
+
+    filteredProducts = applySorting(filteredProducts);
+
+    const start = (state.currentPage - 1) * state.itemsPerPage;
+    const end = start + state.itemsPerPage;
+    const paginatedProducts = filteredProducts.slice(start, end);
+
+    paginatedProducts.forEach(product => {
+      const productCard = createProductCard(product);
+      elements.productGrid.appendChild(productCard);
+    });
+
+    renderPagination(filteredProducts.length);
+  };
+
+  const createProductCard = (product) => {
+    const productCard = document.createElement('div');
+    productCard.className = `product-item ${state.isGridView ? '' : 'list'}`;
+    productCard.dataset.id = product._id;
+    productCard.dataset.category = product.category?._id || '';
+    productCard.dataset.brand = product.brand?._id || '';
+    productCard.dataset.name = product.name;
+    productCard.dataset.price = getNumericValue(product.price);
+    productCard.dataset.rating = getNumericValue(product.ratings);
+
+    const badges = `
+          ${product.isTrending ? '<span class="badge trending">Trending</span>' : ''}
+          ${product.isNew ? '<span class="badge new">New</span>' : ''}
+          ${product.isBestSeller ? '<span class="badge best">Best Seller</span>' : ''}
+        `;
+
+    const ratingValue = getNumericValue(product.ratings);
+    const fullStars = Math.floor(ratingValue);
+    const halfStar = ratingValue % 1 >= 0.5 ? 1 : 0;
+    const emptyStars = 5 - fullStars - halfStar;
+
+    const ratingStars = '★'.repeat(fullStars) +
+      (halfStar ? '½' : '') +
+      '☆'.repeat(emptyStars);
+
+    productCard.innerHTML = `
+          ${badges}
+          <img src="${product.images?.mainImage?.url || 'assets/images/default-product.png'}" 
+               alt="${product.name}" 
+               loading="lazy">
+          <h2 class="product-name">
+            <a href="product.html?id=${product._id}" class="product-link">${product.name}</a>
+          </h2>
+          <p class="brand">${product.brand?.name || 'No Brand'}</p>
+          <div class="rating">
+            <span class="stars">${ratingStars}</span>
+            <span>(${ratingValue.toFixed(1)})</span>
+          </div>
+          <p class="price">${formatCurrency(product.price)}</p>
+          <div class="product-actions">
+            <button type="button" class="add-to-cart" aria-label="Add ${product.name} to cart">
+              Add to Cart
+            </button>
+            <button type="button" class="quick-view" aria-label="Quick view ${product.name}">
+              <i class="fas fa-eye"></i>
+            </button>
+            <button type="button" class="wishlist" aria-label="Add ${product.name} to wishlist">
+              <i class="fas fa-heart"></i>
+            </button>
+            <button type="button" class="compare" aria-label="Compare ${product.name}">
+              <i class="fas fa-balance-scale"></i>
+            </button>
+          </div>
+          <div class="tooltip"></div>
+        `;
+
+    return productCard;
+  };
+
+  const applyFilters = () => {
+    return state.products.filter(product => {
+      const productPrice = getNumericValue(product.price);
+      const productRating = getNumericValue(product.ratings);
+
+      const matchesSearch = product.name.toLowerCase()
+        .includes(state.currentFilters.search.toLowerCase());
+
+      const matchesCategory = state.currentFilters.category === 'all' ||
+        (product.category?._id === state.currentFilters.category);
+
+      const matchesBrand = state.currentFilters.brand === 'all' ||
+        (product.brand?._id === state.currentFilters.brand);
+
+      const matchesRating = state.currentFilters.rating === 'all' ||
+        (productRating >= parseFloat(state.currentFilters.rating));
+
+      const matchesPrice = productPrice >= state.currentFilters.minPrice &&
+        productPrice <= state.currentFilters.maxPrice;
+
+      return matchesSearch && matchesCategory && matchesBrand && matchesRating && matchesPrice;
+    });
+  };
+
+  const applySorting = (products) => {
+    return products.sort((a, b) => {
+      const priceA = getNumericValue(a.price);
+      const priceB = getNumericValue(b.price);
+      const ratingA = getNumericValue(a.ratings);
+      const ratingB = getNumericValue(b.ratings);
+
+      switch (state.currentFilters.sort) {
+        case 'low-high':
+          return priceA - priceB;
+        case 'high-low':
+          return priceB - priceA;
+        case 'rating':
+          return ratingB - ratingA;
+        default:
+          return 0;
+      }
+    });
+  };
+
+  const renderPagination = (totalItems) => {
+    elements.pagination.innerHTML = '';
+    const pageCount = Math.ceil(totalItems / state.itemsPerPage);
+
+    if (state.currentPage > 1) {
+      const prevLink = document.createElement('a');
+      prevLink.href = '#';
+      prevLink.innerHTML = '&laquo;';
+      prevLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        state.currentPage--;
+        renderProducts();
+      });
+      elements.pagination.appendChild(prevLink);
+    }
+
+    for (let i = 1; i <= pageCount; i++) {
+      const pageLink = document.createElement('a');
+      pageLink.href = '#';
+      pageLink.textContent = i;
+      if (i === state.currentPage) {
+        pageLink.classList.add('current');
+      }
+
+      pageLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        state.currentPage = i;
+        renderProducts();
+      });
+
+      elements.pagination.appendChild(pageLink);
+    }
+
+    if (state.currentPage < pageCount) {
+      const nextLink = document.createElement('a');
+      nextLink.href = '#';
+      nextLink.innerHTML = '&raquo;';
+      nextLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        state.currentPage++;
+        renderProducts();
+      });
+      elements.pagination.appendChild(nextLink);
+    }
+  };
+
   const updateCartCount = () => {
-    if (elements.cartCount) {
-      elements.cartCount.textContent = state.cart.reduce((sum, item) => sum + (item.quantity || 0), 0);
-    }
+    const totalItems = state.cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+    elements.cartCount.textContent = totalItems;
   };
 
-  // Update Wishlist Buttons
-  const updateWishlistButtons = () => {
-    document.querySelectorAll('.wishlist').forEach(button => {
-      const productId = button.closest('.product-item')?.dataset.name.replace(/\s+/g, '-').toLowerCase();
-      if (productId) {
-        button.classList.toggle('active', state.wishlist.includes(productId));
+  const updateFilterSummary = () => {
+    elements.filterSummary.innerHTML = '';
+
+    const filters = [
+      {
+        name: 'Search',
+        value: state.currentFilters.search,
+        display: state.currentFilters.search ? `"${state.currentFilters.search}"` : null
+      },
+      {
+        name: 'Category',
+        value: state.currentFilters.category,
+        display: state.currentFilters.category === 'all' ? null :
+          state.categories.find(c => c._id === state.currentFilters.category)?.name
+      },
+      {
+        name: 'Brand',
+        value: state.currentFilters.brand,
+        display: state.currentFilters.brand === 'all' ? null :
+          state.brands.find(b => b._id === state.currentFilters.brand)?.name
+      },
+      {
+        name: 'Rating',
+        value: state.currentFilters.rating,
+        display: state.currentFilters.rating === 'all' ? null :
+          `${state.currentFilters.rating}+ stars`
+      },
+      {
+        name: 'Price',
+        value: `${state.currentFilters.minPrice}-${state.currentFilters.maxPrice}`,
+        display: state.currentFilters.minPrice > 0 || state.currentFilters.maxPrice < state.absoluteMaxPrice ?
+          `${formatCurrency(state.currentFilters.minPrice)} - ${formatCurrency(state.currentFilters.maxPrice)}` : null
       }
+    ].filter(f => f.display);
+
+    filters.forEach(filter => {
+      const filterTag = document.createElement('div');
+      filterTag.className = 'filter-tag';
+      filterTag.innerHTML = `
+            ${filter.name}: ${filter.display}
+            <span aria-label="Remove filter">×</span>
+          `;
+
+      filterTag.querySelector('span').addEventListener('click', () => {
+        if (filter.name === 'Search') {
+          state.currentFilters.search = '';
+          elements.searchInput.value = '';
+        } else if (filter.name === 'Category') {
+          state.currentFilters.category = 'all';
+          document.querySelector('#categoryOptions .filter-option[data-value="all"]').click();
+        } else if (filter.name === 'Brand') {
+          state.currentFilters.brand = 'all';
+          document.querySelector('#brandOptions .filter-option[data-value="all"]').click();
+        } else if (filter.name === 'Rating') {
+          state.currentFilters.rating = 'all';
+          document.querySelector('#ratingOptions .filter-option[data-value="all"]').click();
+        } else if (filter.name === 'Price') {
+          state.currentFilters.minPrice = 0;
+          state.currentFilters.maxPrice = state.absoluteMaxPrice;
+          elements.priceMin.value = 0;
+          elements.priceMax.value = state.absoluteMaxPrice;
+          updatePriceDisplay();
+        }
+
+        state.currentPage = 1;
+        renderProducts();
+        updateFilterSummary();
+      });
+
+      elements.filterSummary.appendChild(filterTag);
     });
   };
 
-  // Update Compare Buttons
-  const updateCompareButtons = () => {
-    document.querySelectorAll('.compare').forEach(button => {
-      const productId = button.closest('.product-item')?.dataset.name.replace(/\s+/g, '-').toLowerCase();
-      if (productId) {
-        button.classList.toggle('active', state.compareList.includes(productId));
-      }
-    });
+  const updatePriceDisplay = () => {
+    elements.minPriceDisplay.textContent = formatCurrency(elements.priceMin.value);
+    elements.maxPriceDisplay.textContent = formatCurrency(elements.priceMax.value);
   };
 
-  // Toggle View Mode
+  const resetFilters = () => {
+    state.currentFilters = {
+      search: '',
+      category: 'all',
+      brand: 'all',
+      rating: 'all',
+      minPrice: 0,
+      maxPrice: state.absoluteMaxPrice,
+      sort: 'default'
+    };
+
+    elements.searchInput.value = '';
+    elements.sortPrice.value = 'default';
+    elements.priceMin.value = 0;
+    elements.priceMax.value = state.absoluteMaxPrice;
+
+    document.querySelectorAll('.filter-option').forEach(option => {
+      option.classList.remove('active');
+      if (option.dataset.value === 'all') {
+        option.classList.add('active');
+      }
+    });
+
+    state.currentPage = 1;
+    updatePriceDisplay();
+    renderProducts();
+    updateFilterSummary();
+  };
+
   const toggleViewMode = (isGrid) => {
+    state.isGridView = isGrid;
     elements.productGrid.classList.toggle('list', !isGrid);
     elements.gridViewBtn.classList.toggle('active', isGrid);
     elements.listViewBtn.classList.toggle('active', !isGrid);
-    updateProducts();
+    renderProducts();
   };
 
-  // Update Price Display
-  const updatePriceDisplay = () => {
-    if (elements.priceMin && elements.priceMax && elements.minPriceDisplay && elements.maxPriceDisplay) {
-      // Ensure max is not less than min
-      if (parseFloat(elements.priceMax.value) < parseFloat(elements.priceMin.value)) {
-        elements.priceMax.value = elements.priceMin.value;
-      }
-      elements.minPriceDisplay.textContent = `$${elements.priceMin.value}`;
-      elements.maxPriceDisplay.textContent = `$${elements.priceMax.value}`;
-    }
-  };
+  const showCartFeedback = (message) => {
+    const feedback = document.createElement('div');
+    feedback.className = 'cart-feedback';
+    feedback.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+    document.body.appendChild(feedback);
 
-  // Autocomplete Suggestions
-  const updateAutocomplete = () => {
-    if (!elements.searchInput || !elements.autocomplete) return;
-    const query = elements.searchInput.value.toLowerCase().trim();
-    const suggestions = Array.from(elements.productGrid.querySelectorAll('.product-item'))
-      .map(item => ({
-        name: item.dataset.name,
-        category: item.dataset.category
-      }))
-      .filter(item => item.name.toLowerCase().includes(query) || item.category.toLowerCase().includes(query))
-      .slice(0, 5);
-
-    elements.autocomplete.innerHTML = '';
-    if (query && suggestions.length > 0) {
-      suggestions.forEach((item, index) => {
-        const div = document.createElement('div');
-        div.classList.add('autocomplete-item');
-        div.textContent = item.name;
-        div.setAttribute('tabindex', '0');
-        div.addEventListener('click', () => {
-          elements.searchInput.value = item.name;
-          elements.autocomplete.style.display = 'none';
-          updateProducts();
-        });
-        div.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-            elements.searchInput.value = item.name;
-            elements.autocomplete.style.display = 'none';
-            updateProducts();
-          }
-        });
-        elements.autocomplete.appendChild(div);
-      });
-      elements.autocomplete.style.display = 'block';
-    } else {
-      elements.autocomplete.style.display = 'none';
-    }
-  };
-
-  // Filter Summary
-  const updateFilterSummary = () => {
-    if (!elements.filterSummary) return;
-    elements.filterSummary.innerHTML = '';
-    const filters = [
-      { key: 'search', value: elements.searchInput.value, label: `Search: ${elements.searchInput.value}` },
-      { key: 'category', value: elements.categoryFilter.value, label: `Category: ${elements.categoryFilter.options[elements.categoryFilter.selectedIndex]?.text || 'All'}` },
-      { key: 'brand', value: elements.brandFilter.value, label: `Brand: ${elements.brandFilter.options[elements.brandFilter.selectedIndex]?.text || 'All'}` },
-      { key: 'rating', value: elements.ratingFilter.value, label: `Rating: ${elements.ratingFilter.options[elements.ratingFilter.selectedIndex]?.text || 'All'}` },
-      { key: 'priceMin', value: elements.priceMin.value, label: `Min Price: $${elements.priceMin.value}` },
-      { key: 'priceMax', value: elements.priceMax.value, label: `Max Price: $${elements.priceMax.value}` }
-    ].filter(f => f.value && f.value !== 'all' && f.value !== '0' && f.value !== '500');
-
-    filters.forEach(filter => {
-      const tag = document.createElement('div');
-      tag.classList.add('filter-tag');
-      tag.innerHTML = `${filter.label} <span aria-label="Remove ${filter.label}">×</span>`;
-      tag.querySelector('span').addEventListener('click', () => {
-        if (filter.key === 'search') elements.searchInput.value = '';
-        else if (filter.key === 'category') elements.categoryFilter.value = 'all';
-        else if (filter.key === 'brand') elements.brandFilter.value = 'all';
-        else if (filter.key === 'rating') elements.ratingFilter.value = 'all';
-        else if (filter.key === 'priceMin') elements.priceMin.value = '0';
-        else if (filter.key === 'priceMax') elements.priceMax.value = '500';
-        updatePriceDisplay();
-        updateProducts();
-        updateURLParams();
-      });
-      elements.filterSummary.appendChild(tag);
-    });
-  };
-
-  // URL Parameters
-  const updateURLParams = () => {
-    const params = new URLSearchParams();
-    if (elements.searchInput.value) params.set('search', elements.searchInput.value);
-    if (elements.categoryFilter.value !== 'all') params.set('category', elements.categoryFilter.value);
-    if (elements.brandFilter.value !== 'all') params.set('brand', elements.brandFilter.value);
-    if (elements.ratingFilter.value !== 'all') params.set('rating', elements.ratingFilter.value);
-    if (elements.priceMin.value !== '0') params.set('priceMin', elements.priceMin.value);
-    if (elements.priceMax.value !== '500') params.set('priceMax', elements.priceMax.value);
-    if (elements.sortPrice.value !== 'default') params.set('sort', elements.sortPrice.value);
-    window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
-  };
-
-  const loadURLParams = () => {
-    const params = new URLSearchParams(window.location.search);
-    elements.searchInput.value = params.get('search') || '';
-    elements.categoryFilter.value = params.get('category') || 'all';
-    elements.brandFilter.value = params.get('brand') || 'all';
-    elements.ratingFilter.value = params.get('rating') || 'all';
-    elements.priceMin.value = params.get('priceMin') || '0';
-    elements.priceMax.value = params.get('priceMax') || '500';
-    elements.sortPrice.value = params.get('sort') || 'default';
-    updatePriceDisplay();
-  };
-
-  // Product Actions
-  const handleProductActions = (e) => {
-    const productItem = e.target.closest('.product-item');
-    if (!productItem) return;
-    const productId = productItem.dataset.name.replace(/\s+/g, '-').toLowerCase();
-
-    if (e.target.closest('.add-to-cart')) {
-      const product = {
-        id: productId,
-        name: productItem.dataset.name,
-        price: parseFloat(productItem.dataset.price) || 0,
-        quantity: 1
-      };
-      const existingItem = state.cart.find(item => item.id === product.id);
-      if (existingItem) {
-        existingItem.quantity = (existingItem.quantity || 0) + 1;
-      } else {
-        state.cart.push(product);
-      }
-      safeLocalStorage.set('cart', state.cart);
-      updateCartCount();
-    }
-
-    if (e.target.closest('.quick-view')) {
-      elements.modalImage.src = productItem.querySelector('img').src;
-      elements.modalImage.alt = productItem.querySelector('img').alt;
-      elements.modalName.textContent = productItem.dataset.name;
-      elements.modalBrand.textContent = productItem.querySelector('.brand').textContent;
-      elements.modalRating.innerHTML = productItem.querySelector('.rating').innerHTML;
-      elements.modalPrice.textContent = `$${productItem.dataset.price}`;
-      elements.modalDescription.textContent = `High-quality ${productItem.dataset.name} from ${productItem.querySelector('.brand').textContent}.`;
-      elements.modalAddToCart.dataset.id = productId;
-      elements.quickViewModal.style.display = 'flex';
-      state.recentlyViewedList = [productId, ...state.recentlyViewedList.filter(id => id !== productId)].slice(0, 4);
-      safeLocalStorage.set('recentlyViewed', state.recentlyViewedList);
-      updateRecentlyViewed();
-    }
-
-    if (e.target.closest('.wishlist')) {
-      state.wishlist = state.wishlist.includes(productId)
-        ? state.wishlist.filter(id => id !== productId)
-        : [...state.wishlist, productId];
-      safeLocalStorage.set('wishlist', state.wishlist);
-      updateWishlistButtons();
-    }
-
-    if (e.target.closest('.compare')) {
-      if (state.compareList.includes(productId)) {
-        state.compareList = state.compareList.filter(id => id !== productId);
-      } else if (state.compareList.length < 3) {
-        state.compareList.push(productId);
-      }
-      safeLocalStorage.set('compare', state.compareList);
-      updateCompareButtons();
-      updateCompareTable();
-    }
-  };
-
-  // Modal Add to Cart
-  const handleModalAddToCart = () => {
-    const product = {
-      id: elements.modalAddToCart.dataset.id,
-      name: elements.modalName.textContent,
-      price: parseFloat(elements.modalPrice.textContent.replace('$', '')) || 0,
-      quantity: 1
-    };
-    const existingItem = state.cart.find(item => item.id === product.id);
-    if (existingItem) {
-      existingItem.quantity = (existingItem.quantity || 0) + 1;
-    } else {
-      state.cart.push(product);
-    }
-    safeLocalStorage.set('cart', state.cart);
-    updateCartCount();
-    elements.quickViewModal.style.display = 'none';
-  };
-
-  // Compare Table
-  const updateCompareTable = () => {
-    if (!elements.compareTable) return;
-    elements.compareTable.innerHTML = '';
-    if (state.compareList.length === 0) {
-      elements.compareModal.style.display = 'none';
-      return;
-    }
-    const products = Array.from(elements.productGrid.querySelectorAll('.product-item')).filter(item =>
-      state.compareList.includes(item.dataset.name.replace(/\s+/g, '-').toLowerCase())
-    );
-    const fields = ['Name', 'Brand', 'Price', 'Rating', 'Category', 'Specs'];
-    fields.forEach(field => {
-      const row = document.createElement('div');
-      row.style.display = 'contents';
-      const label = document.createElement('div');
-      label.classList.add('label');
-      label.textContent = field;
-      row.appendChild(label);
-      products.forEach(product => {
-        const cell = document.createElement('div');
-        if (field === 'Name') cell.textContent = product.dataset.name;
-        else if (field === 'Brand') cell.textContent = product.querySelector('.brand').textContent;
-        else if (field === 'Price') cell.textContent = `$${product.dataset.price}`;
-        else if (field === 'Rating') cell.innerHTML = product.querySelector('.rating').innerHTML;
-        else if (field === 'Category') cell.textContent = product.dataset.category.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-        else if (field === 'Specs') cell.textContent = product.dataset.specs;
-        row.appendChild(cell);
-      });
-      elements.compareTable.appendChild(row);
-    });
-    elements.compareModal.style.display = 'flex';
-  };
-
-  // Recently Viewed
-  const updateRecentlyViewed = () => {
-    if (!elements.recentlyViewed) return;
-    elements.recentlyViewed.innerHTML = '';
-    const products = Array.from(elements.productGrid.querySelectorAll('.product-item')).filter(item =>
-      state.recentlyViewedList.includes(item.dataset.name.replace(/\s+/g, '-').toLowerCase())
-    );
-    products.forEach(product => {
-      const clone = product.cloneNode(true);
-      clone.querySelector('.tooltip')?.remove();
-      elements.recentlyViewed.appendChild(clone);
-    });
-    elements.recentlyViewed.parentElement.style.display = products.length > 0 ? 'block' : 'none';
-  };
-
-  // Pagination
-  const setupPagination = (products) => {
-    if (!elements.pagination) return;
-    elements.pagination.innerHTML = '';
-    const pageCount = Math.ceil(products.length / state.itemsPerPage);
-    if (state.currentPage > pageCount) state.currentPage = 1;
-    for (let i = 1; i <= pageCount; i++) {
-      const link = document.createElement('a');
-      link.textContent = i;
-      link.href = '#';
-      if (i === state.currentPage) link.classList.add('current');
-      link.addEventListener('click', (e) => {
-        e.preventDefault();
-        state.currentPage = i;
-        updateProducts();
-      });
-      elements.pagination.appendChild(link);
-    }
-  };
-
-  // Update Products
-  const updateProducts = () => {
-    if (!elements.spinner || !elements.productGrid || !elements.noResults) return;
-    elements.spinner.style.display = 'block';
     setTimeout(() => {
-      const query = elements.searchInput.value.toLowerCase().trim();
-      const category = elements.categoryFilter.value;
-      const brand = elements.brandFilter.value;
-      const rating = elements.ratingFilter.value;
-      const sortBy = elements.sortPrice.value;
-      const minPrice = parseFloat(elements.priceMin.value) || 0;
-      const maxPrice = parseFloat(elements.priceMax.value) || 500;
-
-      let products = Array.from(elements.productGrid.querySelectorAll('.product-item'));
-
-      // Filter products
-      products = products.filter(product => {
-        const name = product.dataset.name.toLowerCase();
-        const prodCat = product.dataset.category;
-        const prodBrand = product.dataset.brand;
-        const price = parseFloat(product.dataset.price) || 0;
-        const prodRating = parseFloat(product.dataset.rating) || 0;
-        const matchesSearch = name.includes(query);
-        const matchesCategory = category === 'all' || prodCat === category;
-        const matchesBrand = brand === 'all' || prodBrand === brand;
-        const matchesPrice = price >= minPrice && price <= maxPrice;
-        const matchesRating = rating === 'all' || prodRating >= parseFloat(rating);
-        const matchesSort = sortBy === 'trending' ? product.dataset.trending === 'true' :
-          sortBy === 'best-selling' ? product.dataset.best === 'true' :
-            sortBy === 'new-arrivals' ? product.dataset.new === 'true' : true;
-        return matchesSearch && matchesCategory && matchesBrand && matchesPrice && matchesRating && matchesSort;
-      });
-
-      // Sort products
-      products.sort((a, b) => {
-        const priceA = parseFloat(a.dataset.price) || 0;
-        const priceB = parseFloat(b.dataset.price) || 0;
-        const ratingA = parseFloat(a.dataset.rating) || 0;
-        const ratingB = parseFloat(b.dataset.rating) || 0;
-        if (sortBy === 'low-high') return priceA - priceB;
-        if (sortBy === 'high-low') return priceB - priceA;
-        if (sortBy === 'rating') return ratingB - ratingA;
-        return 0;
-      });
-
-      // Pagination
-      setupPagination(products);
-      const start = (state.currentPage - 1) * state.itemsPerPage;
-      const end = start + state.itemsPerPage;
-
-      // Display products
-      products.forEach((product, index) => {
-        product.style.display = (index >= start && index < end) ? 'flex' : 'none';
-        if (index >= start && index < end) {
-          setTimeout(() => product.classList.add('visible'), index * 50);
-        } else {
-          product.classList.remove('visible');
-        }
-      });
-
-      // Show/hide no results
-      elements.noResults.style.display = products.length > 0 ? 'none' : 'block';
-      updateFilterSummary();
-      updateURLParams();
-      elements.spinner.style.display = 'none';
-    }, 300);
+      feedback.classList.add('show');
+      setTimeout(() => {
+        feedback.classList.remove('show');
+        setTimeout(() => {
+          document.body.removeChild(feedback);
+        }, 300);
+      }, 2000);
+    }, 10);
   };
 
-  // Reset Filters
-  const resetFilters = () => {
-    elements.searchInput.value = '';
-    elements.categoryFilter.value = 'all';
-    elements.brandFilter.value = 'all';
-    elements.ratingFilter.value = 'all';
-    elements.sortPrice.value = 'default';
-    elements.priceMin.value = '0';
-    elements.priceMax.value = '500';
-    state.currentPage = 1;
-    updatePriceDisplay();
-    updateProducts();
-    updateURLParams();
-  };
+  // Add to cart helper function
+  const addToCart = (productId, quantity = 1) => {
+    const product = state.products.find(p => p._id === productId);
+    if (!product) return;
 
-  // Tooltips
-  const handleTooltips = (e) => {
-    const productItem = e.target.closest('.product-item');
-    if (!productItem) return;
-    const tooltip = productItem.querySelector('.tooltip');
-    if (e.target.closest('.product-item img')) {
-      tooltip.textContent = productItem.dataset.specs;
-      tooltip.style.display = 'block';
-      tooltip.style.left = `${e.clientX - productItem.getBoundingClientRect().left + 10}px`;
-      tooltip.style.top = `${e.clientY - productItem.getBoundingClientRect().top + 10}px`;
+    const existingItem = state.cart.find(item => item.id === productId);
+
+    if (existingItem) {
+      existingItem.quantity = (existingItem.quantity || 1) + quantity;
     } else {
-      tooltip.style.display = 'none';
+      state.cart.push({
+        id: productId,
+        name: product.name,
+        price: getNumericValue(product.price),
+        image: product.images?.mainImage?.url || 'assets/images/default-product.png',
+        quantity: quantity
+      });
     }
+
+    localStorage.setItem('cart', JSON.stringify(state.cart));
+    updateCartCount();
+    showCartFeedback('Added to cart!');
   };
 
-  const hideTooltip = (e) => {
-    const tooltip = e.target.querySelector('.tooltip');
-    if (tooltip) tooltip.style.display = 'none';
-  };
+  initShop();
 
-  // Event Listeners
-  elements.menuToggle.addEventListener('click', toggleMenu);
+  elements.menuToggle.addEventListener('click', () => {
+    elements.navMenu.classList.toggle('active');
+    elements.menuIcon.classList.toggle('fa-bars');
+    elements.menuIcon.classList.toggle('fa-times');
+  });
+
   elements.gridViewBtn.addEventListener('click', () => toggleViewMode(true));
   elements.listViewBtn.addEventListener('click', () => toggleViewMode(false));
   elements.resetFilters.addEventListener('click', resetFilters);
-  elements.productGrid.addEventListener('click', handleProductActions);
-  elements.productGrid.addEventListener('mousemove', handleTooltips);
-  elements.productGrid.addEventListener('mouseleave', hideTooltip);
-  elements.modalAddToCart.addEventListener('click', handleModalAddToCart);
-  elements.clearCompare.addEventListener('click', () => {
-    state.compareList = [];
-    safeLocalStorage.set('compare', state.compareList);
-    updateCompareButtons();
-    elements.compareModal.style.display = 'none';
-  });
 
-  [elements.quickViewModal, elements.compareModal].forEach(modal => {
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) modal.style.display = 'none';
-    });
-    modal.querySelector('.modal-close').addEventListener('click', () => {
-      modal.style.display = 'none';
-    });
-  });
+  elements.productGrid.addEventListener('click', (e) => {
+    const productCard = e.target.closest('.product-item');
+    if (!productCard) return;
 
-  const debouncedUpdate = debounce(updateProducts, 300);
-  const debouncedAutocomplete = debounce(updateAutocomplete, 200);
-  const debouncedPriceUpdate = debounce(updatePriceDisplay, 100);
+    const productId = productCard.dataset.id;
+    const product = state.products.find(p => p._id === productId);
 
-  [elements.categoryFilter, elements.brandFilter, elements.ratingFilter, elements.sortPrice].forEach(el => {
-    el.addEventListener('change', debouncedUpdate);
-  });
+    if (!product) return;
 
-  [elements.priceMin, elements.priceMax].forEach(el => {
-    el.addEventListener('input', () => {
-      debouncedPriceUpdate();
-      debouncedUpdate();
-    });
-  });
+    // Add to cart
+    if (e.target.closest('.add-to-cart')) {
+      addToCart(productId);
+      e.stopPropagation();
+    }
 
-  elements.searchInput.addEventListener('input', () => {
-    debouncedUpdate();
-    debouncedAutocomplete();
-  });
+    // Quick view
+    if (e.target.closest('.quick-view')) {
+      elements.modalImage.src = product.images?.mainImage?.url || 'assets/images/default-product.png';
+      elements.modalImage.alt = product.name;
+      elements.modalName.textContent = product.name;
+      elements.modalBrand.textContent = product.brand?.name || 'No Brand';
 
-  elements.searchInput.addEventListener('keydown', (e) => {
-    const items = elements.autocomplete.querySelectorAll('.autocomplete-item');
-    if (items.length === 0) return;
-    let currentIndex = Array.from(items).findIndex(item => item === document.activeElement);
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      currentIndex = (currentIndex + 1) % items.length;
-      items[currentIndex].focus();
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      currentIndex = (currentIndex - 1 + items.length) % items.length;
-      items[currentIndex].focus();
-    } else if (e.key === 'Enter' && currentIndex >= 0) {
-      e.preventDefault();
-      elements.searchInput.value = items[currentIndex].textContent;
-      elements.autocomplete.style.display = 'none';
-      updateProducts();
+      const ratingValue = getNumericValue(product.ratings);
+      const fullStars = Math.floor(ratingValue);
+      const halfStar = ratingValue % 1 >= 0.5 ? 1 : 0;
+      const emptyStars = 5 - fullStars - halfStar;
+      const ratingStars = '★'.repeat(fullStars) + (halfStar ? '½' : '') + '☆'.repeat(emptyStars);
+
+      elements.modalRating.innerHTML = `
+            <span class="stars">${ratingStars}</span>
+            <span>(${ratingValue.toFixed(1)})</span>
+          `;
+
+      elements.modalPrice.textContent = formatCurrency(product.price);
+      elements.modalDescription.textContent = product.description || 'No description available';
+      elements.modalAddToCart.dataset.id = productId;
+      elements.quickViewModal.style.display = 'flex';
+
+      // Update recently viewed
+      state.recentlyViewedList = state.recentlyViewedList.filter(id => id !== productId);
+      state.recentlyViewedList.unshift(productId);
+      if (state.recentlyViewedList.length > 5) state.recentlyViewedList.pop();
+      localStorage.setItem('recentlyViewed', JSON.stringify(state.recentlyViewedList));
+      updateRecentlyViewed();
     }
   });
 
-  // Smooth Scroll
-  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', (e) => {
-      e.preventDefault();
-      const targetId = anchor.getAttribute('href');
-      const targetElement = document.querySelector(targetId);
-      if (targetElement) {
-        targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
+  const updateRecentlyViewed = () => {
+    elements.recentlyViewed.innerHTML = '';
+    const recentProducts = state.recentlyViewedList
+      .map(id => state.products.find(p => p._id === id))
+      .filter(p => p);
+
+    recentProducts.forEach(product => {
+      const productCard = createProductCard(product);
+      productCard.classList.add('recent-product');
+      elements.recentlyViewed.appendChild(productCard);
+    });
+  };
+
+  elements.modalAddToCart.addEventListener('click', () => {
+    const productId = elements.modalAddToCart.dataset.id;
+    addToCart(productId);
+    elements.quickViewModal.style.display = 'none';
+  });
+
+  // Update filters
+  const updateFilters = () => {
+    state.currentFilters.search = elements.searchInput.value;
+    state.currentFilters.sort = elements.sortPrice.value;
+    state.currentFilters.minPrice = parseFloat(elements.priceMin.value) || 0;
+    state.currentFilters.maxPrice = parseFloat(elements.priceMax.value) || state.absoluteMaxPrice;
+
+    state.currentPage = 1;
+    renderProducts();
+    updateFilterSummary();
+  };
+
+  const debouncedUpdate = debounce(updateFilters, 300);
+
+  elements.searchInput.addEventListener('input', debouncedUpdate);
+  elements.sortPrice.addEventListener('change', debouncedUpdate);
+  elements.priceMin.addEventListener('input', () => {
+    updatePriceDisplay();
+    debouncedUpdate();
+  });
+  elements.priceMax.addEventListener('input', () => {
+    updatePriceDisplay();
+    debouncedUpdate();
+  });
+
+  document.querySelectorAll('.modal-close').forEach(button => {
+    button.addEventListener('click', () => {
+      elements.quickViewModal.style.display = 'none';
+      elements.compareModal.style.display = 'none';
     });
   });
 
-  // Initialize
-  state.cart = safeLocalStorage.get('cart');
-  state.wishlist = safeLocalStorage.get('wishlist');
-  state.compareList = safeLocalStorage.get('compare');
-  state.recentlyViewedList = safeLocalStorage.get('recentlyViewed');
-  loadURLParams();
-  updateCartCount();
-  updateWishlistButtons();
-  updateCompareButtons();
-  updateRecentlyViewed();
-  updateProducts();
+  window.addEventListener('click', (e) => {
+    if (e.target === elements.quickViewModal) {
+      elements.quickViewModal.style.display = 'none';
+    }
+    if (e.target === elements.compareModal) {
+      elements.compareModal.style.display = 'none';
+    }
+  });
 });
