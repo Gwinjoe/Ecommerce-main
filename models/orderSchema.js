@@ -35,9 +35,39 @@ const orderSchema = mongoose.Schema({
       return this.customer.address
     }
   },
-  paymentMethod: {
+  coupon: {
     type: String,
-  }
+  },
+  totalPrice: {
+    type: mongoose.Types.Decimal128,
+  },
+  payment: {
+    reference: String,
+    transactionId: String,
+    method: String,
+  },
+  // const orderData = {
+  //       customer: {
+  //         userId: currentUser?._id || null,
+  //         name: document.getElementById("full-name").value,
+  //         email: document.getElementById("email").value,
+  //         address: document.getElementById("address").value,
+  //         city: document.getElementById("city").value,
+  //         phone: document.getElementById("phone").value,
+  //         postalCode: document.getElementById("postal-code").value
+  //       },
+  //       items: cart,
+  //       coupon: couponInput.value.trim() || null,
+  //       totals: calculateTotals(),
+  //       payment: {
+  //         reference: paymentReference,
+  //         transactionId,
+  //         method: "flutterwave"
+  //       }
+  //     };
+  //
+  //
+
 
 }, {
   timestamps: true,

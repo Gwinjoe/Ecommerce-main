@@ -38,13 +38,17 @@ exports.get_order_by_id = async (req, res) => {
 }
 
 exports.add_order = async (req, res) => {
-  const { status, items, customer } = req.body;
+  const { orderId, items, customer } = req.body;
   try {
+    console.log(orderId, items, customer);
+    return;
+    const { userId, shippingAddress } = customer;
     const products = items || [];
     const newOrder = await new Orders({
-      status,
+      orderId,
       products,
-      customer
+      customer: userId,
+      shippingAddress
     })
 
     const result = await newOrder.save();

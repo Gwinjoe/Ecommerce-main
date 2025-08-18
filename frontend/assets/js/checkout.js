@@ -195,11 +195,12 @@ document.addEventListener("DOMContentLoaded", () => {
           email: document.getElementById("email").value,
           address: document.getElementById("address").value,
           city: document.getElementById("city").value,
+          phone: document.getElementById("phone").value,
           postalCode: document.getElementById("postal-code").value
         },
         items: cart,
         coupon: couponInput.value.trim() || null,
-        totals: calculateTotals(),
+        totalPrice: calculateTotals(),
         payment: {
           reference: paymentReference,
           transactionId,
@@ -247,23 +248,24 @@ document.addEventListener("DOMContentLoaded", () => {
     const customerEmail = document.getElementById("email").value;
 
     // Generate unique transaction reference
-    const txRef = `SWISS-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const txRef = `ORD_SWISS-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
 
     FlutterwaveCheckout({
-      public_key: "FLWPUBK_TEST-XXXXXXXXXXXXXXXXXXXX", // Replace with your public key
+      public_key: "FLWPUBK_TEST-e99faff0517d291310c43b73a183209e-X", // Replace with your public key
       tx_ref: txRef,
       amount: totals.total,
       currency: "NGN",
       payment_options: "card, banktransfer, ussd",
       redirect_url: "", // Optional redirect URL
       customer: {
+        id: currentUser._id,
         email: customerEmail,
         name: customerName,
       },
       customizations: {
         title: "SWISSTools",
         description: `Payment for ${cart.length} items`,
-        logo: "https://yourdomain.com/logo.png", // Replace with your logo
+        logo: "assets/images/swisstools_logo.png", // Replace with your logo
       },
       callback: function(response) {
         if (response.status === "successful") {
