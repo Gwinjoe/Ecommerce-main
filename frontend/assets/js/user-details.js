@@ -1,26 +1,54 @@
-export const fetchCurrentUser = async () => {
+const config = await fetch("/api/config");
+const { ipdatakey } = await config.json();
+
+const fetchCurrentUser = async () => {
   try {
     const response = await fetch('/api/user');
     const data = await response.json();
 
     if (data.success) {
-      currentUser = data.data;
-      // Pre-fill form with user data if available
-      if (currentUser) {
-        document.getElementById('full-name').value = currentUser.name || '';
-        document.getElementById('email').value = currentUser.email || '';
-        document.getElementById('address').value = currentUser.address || '';
-        document.getElementById('city').value = currentUser.city || '';
-        document.getElementById('postal-code').value = currentUser.postalCode || '';
-      }
+      let currentUser = data.data;
+      return currentUser;
     }
   } catch (error) {
     console.error('Error fetching user:', error);
   }
 };
 
+const updateHeaderView = async () => {
+  try {
+    const currentUser = await fetchCurrentUser();
+    if (currentUser) {
+      const authlinks = document.querySelector(".auth-links");
+      const html = `
+      <i class="fas fa-user"></i>
+      <a href="/dashboard">Dashboard</a>
+`;
+      authlinks.innerHTML = html
+    }
+  } catch (err) {
+    console.log(err)
+  }
+}
 
-export async function getUserLocation() {
+async function useapi() {
+  const response = await fetch(`https://api.ipdata.co?api-key=${ipdatakey}`);
+  const response2 = await fetch("https://ipapi.co/json");
+  const result1 = await response.json();
+  const result2 = await response2.json();
+
+
+
+  if (!result1 || result2) {
+    return;
+  }
+  return {
+    ipdata: result1,
+    ipapi: result2
+  }
+}
+
+const getUserLocation = async () => {
   const options = {
     enableHighAccuracy: true,
     timeout: 5000,
@@ -43,19 +71,11 @@ export async function getUserLocation() {
         long: longitude,
         acc: accuracy
       },
-      apilocation: locationDetails
+      ipdetails: locationDetails
     }
   }
 
-  async function useapi() {
-    const response = await fetch("https://ipapi.co/json");
-    const results = await response.json();
 
-    if (!results) {
-      return;
-    }
-    return results;
-  }
 
   async function errorCallback(error) {
     switch (error.code) {
@@ -74,13 +94,57 @@ export async function getUserLocation() {
     }
 
     const locationDetails = await useapi();
-    return locationDetails;
+    return {
+      geolocation: {
+        lat: "",
+        long: "",
+        acc: "",
+      },
+      ipdetails: locationDetails
+    };
   }
 
   if (navigator.geolocation) {
     const location = navigator.geolocation.getCurrentPosition(successCallback, errorCallback, options);
+
+    const response = await fetch("/api/edit_user", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ location })
+    });
+
+    const { success, results } = await response.json();
+    if (success) {
+      console.log(results)
+    }
     return location;
   } else {
     console.error("Geolocation is not supported by this browser.");
+    const locationDetails = await useapi();
+    const response = await fetch("/api/edit_user", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ locationDetails })
+    });
+
+    const { success, results } = await response.json();
+    if (success) {
+      console.log(results)
+    }
+    return {
+      geolocation: {
+        lat: "",
+        long: "",
+        acc: "",
+      },
+      ipdetails: locationDetails
+    };
+
   }
 }
+
+

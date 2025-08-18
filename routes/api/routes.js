@@ -1,4 +1,4 @@
-
+require("dotenv").config;
 const express = require("express");
 const router = express.Router();
 const { delete_multiple_products, editMultipleProducts, get_product_by_id, category_count, product_count, edit_product, delete_product, getProducts, add_category, get_categories, edit_category, get_category_by_id, delete_category, add_product } = require("../../controllers/productController")
@@ -22,7 +22,12 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-
+router.get("/config", (req, res) => {
+  res.json({
+    flwpubkey: process.env.FLUTTERWAVEPUBKEY,
+    ipdatakey: process.env.IPDATAKEY
+  })
+})
 router.post("/signin",
   passport.authenticate("local", {
     failWithError: true

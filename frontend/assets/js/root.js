@@ -492,6 +492,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize app
   initApp();
 
+
   // Update cart count
   updateCartCount();
 

@@ -188,6 +188,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const completeOrder = async (paymentReference, transactionId) => {
     try {
       // Prepare order data
+
       const orderData = {
         customer: {
           userId: currentUser?._id || null,
@@ -242,7 +243,9 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   // Initialize Flutterwave payment
-  const initiatePayment = () => {
+  const initiatePayment = async () => {
+    const config = await fetch("/api/config");
+    const { flwpubkey } = await config.json();
     const totals = calculateTotals();
     const customerName = document.getElementById("full-name").value;
     const customerEmail = document.getElementById("email").value;
@@ -251,7 +254,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const txRef = `ORD_SWISS-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
 
     FlutterwaveCheckout({
-      public_key: "FLWPUBK_TEST-e99faff0517d291310c43b73a183209e-X", // Replace with your public key
+      public_key: flwpubkey, // Replace with your public key
       tx_ref: txRef,
       amount: totals.total,
       currency: "NGN",

@@ -38,6 +38,10 @@ const userSchema = mongoose.Schema({
   address: {
     type: String,
   },
+  location: {
+    type: Map,
+    select: false
+  },
   active: {
     type: Boolean,
     default: false,

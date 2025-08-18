@@ -20,7 +20,7 @@ exports.get_users = async (req, res) => {
 exports.get_user = async (req, res) => {
   const id = req.user._id;
   try {
-    const data = await User.findById(id);
+    const data = await User.findById(id).select("+location");
     if (!data) {
       return res.status(401).json({ success: false, message: "No user Found!" });
     }
@@ -75,9 +75,9 @@ exports.add_user = async (req, res) => {
 }
 
 exports.edit_user = async (req, res) => {
-  const { id, name, email, password, admin } = req.body;
+  const { id, name, email, password, admin, location } = req.body;
   try {
-    const existingUser = await User.findById(id).select("+password");
+    const existingUser = await User.findById(id).select("+password +location");
 
     if (!existingUser) {
       return res.status(401).json({ success: false, message: "Cannot find user" });
@@ -95,6 +95,10 @@ exports.edit_user = async (req, res) => {
     }
     if (admin) {
       existingUser.admin = admin;
+    }
+
+    if (location) {
+      existingUser.location = location;
     }
     const results = await existingUser.save();
     console.log(results);
