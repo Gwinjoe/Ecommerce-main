@@ -57,13 +57,11 @@
         <div class="cart">
           <a href="cart.html"><i class="fas fa-shopping-cart"></i>
             <span class="cart-text">Cart</span>
-            <span class="cart-count">0</span>
-          </a>
+            <span class="cart-count">0</span></a>
         </div>
       </div>
     </div>
   </header>
-
   <!-- Main Content -->
   <main class="container checkout-container animate-fade">
     <h1 class="checkout-title">Checkout</h1>
@@ -79,7 +77,7 @@
           <input type="email" id="email" required>
         </div>
         <div class="form-group">
-          <label for="address">Address</label>
+          <label for="address">Address (Incl. Apartment and street)</label>
           <input type="text" id="address" required>
         </div>
         <div class="form-group">
@@ -88,12 +86,16 @@
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label for="city">City</label>
+            <label for="city">City/Town</label>
             <input type="text" id="city" required>
           </div>
           <div class="form-group">
+            <label for="city">State</label>
+            <input type="text" id="state" required>
+          </div>
+          <div class="form-group">
             <label for="country">Country</label>
-            <input type="text" id="country" required>
+            <input type="text" id="country" value="Nigeria" disabled required>
           </div>
           <div class="form-group">
             <label for="postal-code">Postal Code</label>
@@ -102,10 +104,6 @@
         </div>
         <h2>Payment Method</h2>
         <div class="payment-options">
-          <label>
-            <input type="radio" name="payment-method" value="card" checked>
-            <i class="fas fa-credit-card"></i> Credit/Debit Card
-          </label>
         </div>
       </div>
       <div class="order-summary">
@@ -132,20 +130,29 @@
           <label for="coupon-code">Coupon Code</label>
           <div class="coupon-input">
             <input type="text" id="coupon-code" placeholder="Enter coupon code">
-            <button class="btn btn-apply-coupon" type="button"><i class="fas fa-ticket-alt"></i> Apply</button>
+            <button class="btn btn-apply-coupon" type="button"><i class="fas fa-ticket-alt"></i>
+              Apply</button>
           </div>
         </div>
         <div class="summary-details">
-          <p><span>Subtotal:</span> <span class="summary-subtotal">$199.97</span></p>
-          <p><span>Discount:</span> <span class="summary-discount">$0.00</span></p>
-          <p><span>Shipping:</span> <span class="shipping-fee">$10.00</span></p>
-          <p><span>Total:</span> <span class="summary-total">$209.97</span></p>
+          <p><span>Subtotal:</span>
+            <span class="summary-subtotal">$199.97</span>
+          </p>
+          <p><span>Discount:</span>
+            <span class="summary-discount">$0.00</span>
+          </p>
+          <p><span>Shipping:</span>
+            <span class="shipping-fee">$10.00</span>
+          </p>
+          <p><span>Total:</span>
+            <span class="summary-total">$209.97</span>
+          </p>
         </div>
-        <button class="btn btn-primary btn-place-order" type="button"><i class="fas fa-check"></i> Place Order</button>
+        <button class="btn btn-primary btn-place-order" type="button"><i class="fas fa-check"></i>
+          Place Order</button>
       </div>
     </div>
   </main>
-
   <!-- Footer -->
   <footer class="site-footer">
     <div class="footer-container">
@@ -153,10 +160,13 @@
         <h3 class="footer-logo">SWISS<span class="highlight">Tools</span></h3>
         <p>Your trusted partner in engineering &amp; construction tools.</p>
         <div class="footer-contact">
-          <p><i class="fas fa-map-marker-alt"></i> No 5, Chief Tom Agbuji Street (Cherubim Road) Mile 3, Port Harcourt,
+          <p><i class="fas fa-map-marker-alt"></i>
+            No 5, Chief Tom Agbuji Street (Cherubim Road) Mile 3, Port Harcourt,
             Nigeria.</p>
-          <p><i class="fas fa-phone-alt"></i> +234 913 232 8654</p>
-          <p><i class="fas fa-envelope"></i> support@swisstools.store</p>
+          <p><i class="fas fa-phone-alt"></i>
+            +234 913 232 8654</p>
+          <p><i class="fas fa-envelope"></i>
+            support@swisstools.store</p>
         </div>
       </div>
       <div class="footer-column animate-fade">
@@ -197,19 +207,21 @@
       </div>
     </div>
     <div class="footer-bottom">
-      <p>© <span id="year"></span> SWISSTools. All rights reserved.</p>
+      <p>©
+        <span id="year"></span>
+        SWISSTools. All rights reserved.
+      </p>
     </div>
     <button id="scrollTopBtn" title="Go to top" type="button">
       <span class="visually-hidden">Scroll to top</span>
       <i class="fas fa-arrow-up"></i>
     </button>
   </footer>
-
   <!-- Swiper JS -->
   <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
   <!-- Importmap for GSAP -->
   <script type="importmap">
-        {"imports":{"gsap":"https://cdn.skypack.dev/gsap","gsap/ScrollTrigger":"https://cdn.skypack.dev/gsap/ScrollTrigger"}}
+      {"imports":{"gsap":"https://cdn.skypack.dev/gsap","gsap/ScrollTrigger":"https://cdn.skypack.dev/gsap/ScrollTrigger"}}
     </script>
   <!-- JavaScript -->
   <script src="https://checkout.flutterwave.com/v3.js"></script>

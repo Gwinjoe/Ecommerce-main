@@ -48,9 +48,11 @@ document.addEventListener("DOMContentLoaded", () => {
         if (currentUser) {
           document.getElementById('full-name').value = currentUser.name || '';
           document.getElementById('email').value = currentUser.email || '';
-          document.getElementById('address').value = currentUser.address || '';
-          document.getElementById('city').value = currentUser.city || '';
-          document.getElementById('postal-code').value = currentUser.postalCode || '';
+          document.getElementById('address').value = currentUser.address.addr || '';
+          document.getElementById('city').value = currentUser.address.city || '';
+          document.getElementById('postal-code').value = currentUser.address.postalCode || currentUser.location.ipdata.postalCode || '';
+          document.getElementById('phone').value = currentUser.phoneNumber || '';
+          document.getElementById('')
         }
       }
     } catch (error) {
