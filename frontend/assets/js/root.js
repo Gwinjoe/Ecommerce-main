@@ -1,3 +1,5 @@
+import { updateHeaderView, useapi } from "./user-details.js"
+
 async function fetchData(endpoint) {
   try {
     const response = await fetch(endpoint);
@@ -11,7 +13,7 @@ async function fetchData(endpoint) {
     return [];
   }
 }
-
+let currency = "NGN";
 let allProducts = [];
 let allCategories = [];
 let allBrands = [];
@@ -92,7 +94,7 @@ function createProductCard(product) {
   const price = product.price?.$numberDecimal || product.price || 0;
   const formattedPrice = new Intl.NumberFormat('en-NG', {
     style: 'currency',
-    currency: 'NGN',
+    currency: currency,
     minimumFractionDigits: 2
   }).format(price).replace('NGN', '₦');
 
@@ -116,7 +118,7 @@ function createSwiperSlide(product) {
   const price = product.price?.$numberDecimal || product.price || 0;
   const formattedPrice = new Intl.NumberFormat('en-NG', {
     style: 'currency',
-    currency: 'NGN',
+    currency: currency,
     minimumFractionDigits: 2
   }).format(price).replace('NGN', '₦');
 
@@ -140,7 +142,7 @@ function createRecentSlide(product) {
   const price = product.price?.$numberDecimal || product.price || 0;
   const formattedPrice = new Intl.NumberFormat('en-NG', {
     style: 'currency',
-    currency: 'NGN',
+    currency: currency,
     minimumFractionDigits: 2
   }).format(price).replace('NGN', '₦');
 
@@ -488,10 +490,13 @@ function animateProductCards() {
 }
 
 // Initialize the app when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+
+  updateHeaderView();
+  const { ipapi } = await useapi();
+  currency = ipapi.currency
   // Initialize app
   initApp();
-
 
   // Update cart count
   updateCartCount();

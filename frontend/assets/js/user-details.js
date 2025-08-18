@@ -1,7 +1,9 @@
-const config = await fetch("/api/config");
-const { ipdatakey } = await config.json();
-
-const fetchCurrentUser = async () => {
+const getConfig = async () => {
+  const config = await fetch("/api/config");
+  const { ipdatakey } = await config.json();
+  return ipdatakey
+}
+export const fetchCurrentUser = async () => {
   try {
     const response = await fetch('/api/user');
     const data = await response.json();
@@ -15,7 +17,7 @@ const fetchCurrentUser = async () => {
   }
 };
 
-const updateHeaderView = async () => {
+export const updateHeaderView = async () => {
   try {
     const currentUser = await fetchCurrentUser();
     if (currentUser) {
@@ -31,24 +33,25 @@ const updateHeaderView = async () => {
   }
 }
 
-async function useapi() {
+export async function useapi() {
+  const ipdatakey = await getConfig();
   const response = await fetch(`https://api.ipdata.co?api-key=${ipdatakey}`);
   const response2 = await fetch("https://ipapi.co/json");
   const result1 = await response.json();
   const result2 = await response2.json();
 
-
-
-  if (!result1 || result2) {
+  if (!result1 && !result2) {
     return;
   }
+  console.log("ipdata: " + result1)
+  console.log("ipapi: " + result2)
   return {
-    ipdata: result1,
-    ipapi: result2
+    ipdata: result1 ? result1 : {},
+    ipapi: result2 ? result2 : {}
   }
 }
 
-const getUserLocation = async () => {
+export const getUserLocation = async () => {
   const options = {
     enableHighAccuracy: true,
     timeout: 5000,
@@ -146,5 +149,4 @@ const getUserLocation = async () => {
 
   }
 }
-
 

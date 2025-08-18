@@ -1,4 +1,7 @@
+import { updateHeaderView, useapi } from "./user-details.js";
+const { ipapi } = await useapi();
 document.addEventListener('DOMContentLoaded', () => {
+  updateHeaderView();
   const elements = {
     menuToggle: document.getElementById('menu-toggle'),
     navMenu: document.getElementById('nav-menu'),
@@ -70,7 +73,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const formatCurrency = (amount) => {
     const value = amount?.$numberDecimal ? parseFloat(amount.$numberDecimal) : parseFloat(amount);
-
+    if (ipapi.currency !== "NGN") {
+      return new Intl.NumberFormat('en-NG', {
+        style: 'currency',
+        currency: ipapi.currency,
+        minimumFractionDigits: 2
+      }).format(amount)
+    }
     return `₦${value.toLocaleString('en-NG', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
@@ -105,6 +114,12 @@ document.addEventListener('DOMContentLoaded', () => {
     state.categories = await fetchData('/api/categories');
     state.brands = await fetchData('/api/brands');
     state.products = await fetchData('/api/products');
+
+    if (ipapi.currency !== "NGN") {
+      state.products.forEach((product) => {
+        product.price.$numberDecimal = convert(product.price.$numberDecimal, ipapi.currency)
+      })
+    }
 
     if (state.products.length > 0) {
       const maxPrice = Math.max(...state.products.map(p => getNumericValue(p.price)));
@@ -153,7 +168,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateFilterSummary();
       });
     });
-
     renderProducts();
     updateCartCount();
     updateFilterSummary();
