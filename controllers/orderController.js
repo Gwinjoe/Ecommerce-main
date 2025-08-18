@@ -10,7 +10,7 @@ exports.order_count = async (req, res) => {
 
 exports.getOrders = async (req, res) => {
   try {
-    const data = await Orders.find().sort({ createdAt: -1 }).populate("customer", "product");
+    const data = await Orders.find().sort({ createdAt: -1 }).populate("customer").populate("product");
     if (!data) {
       return res.status(401).json({ success: false, message: "No Order Found!" });
     }
