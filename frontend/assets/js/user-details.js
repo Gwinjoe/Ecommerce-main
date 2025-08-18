@@ -20,23 +20,44 @@ export const fetchCurrentUser = async () => {
 };
 
 
-export function getUserLocation() {
+export async function getUserLocation() {
   const options = {
     enableHighAccuracy: true,
     timeout: 5000,
     maximumAge: 0
   };
 
-  function successCallback(position) {
+  async function successCallback(position) {
     const latitude = position.coords.latitude;
     const longitude = position.coords.longitude;
     const accuracy = position.coords.accuracy;
     console.log(`Latitude: ${latitude}`);
     console.log(`Longitude: ${longitude}`);
     console.log(`Accuracy: ${accuracy} meters`);
+
+    const locationDetails = await useapi();
+
+    return {
+      geolocation: {
+        lat: latitude,
+        long: longitude,
+        acc: accuracy
+      },
+      apilocation: locationDetails
+    }
   }
 
-  function errorCallback(error) {
+  async function useapi() {
+    const response = await fetch("https://ipapi.co/json");
+    const results = await response.json();
+
+    if (!results) {
+      return;
+    }
+    return results;
+  }
+
+  async function errorCallback(error) {
     switch (error.code) {
       case error.PERMISSION_DENIED:
         console.error("User denied the request for Geolocation.");
@@ -51,10 +72,14 @@ export function getUserLocation() {
         console.error("An unknown error occurred.");
         break;
     }
+
+    const locationDetails = await useapi();
+    return locationDetails;
   }
 
   if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(successCallback, errorCallback, options);
+    const location = navigator.geolocation.getCurrentPosition(successCallback, errorCallback, options);
+    return location;
   } else {
     console.error("Geolocation is not supported by this browser.");
   }
