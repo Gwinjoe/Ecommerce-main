@@ -508,6 +508,18 @@ document.addEventListener("DOMContentLoaded", () => {
           showStatusModal("failed", message);
         }
 
+        productName = "";
+        description = "";
+        category = "";
+        price = "";
+        brand = "";
+        stock = "";
+        keyFeatures = [];
+        whatsInBox = [];
+        productDetails = [];
+        mainImage = "";
+        thumbnails = [];
+
         gsap.to(addBtn, {
           scale: 0.95,
           duration: 0.1,

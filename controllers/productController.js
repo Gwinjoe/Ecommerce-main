@@ -1,3 +1,4 @@
+const { clearUploads } = require("../utils/clearuploads")
 const Product = require("../models/productSchema");
 const Category = require("../models/categorySchema");
 const { uploader, uploadMultiple } = require("../middlewares/uploader");
@@ -190,7 +191,7 @@ exports.add_product = async (req, res) => {
       message: "Product created successfully!",
       product: savedProduct
     });
-
+    clearUploads();
   } catch (error) {
     console.error("Product creation error:", error);
     res.status(500).json({
@@ -356,6 +357,7 @@ exports.edit_product = async (req, res) => {
 
     const results = await existingProduct.save();
     res.status(201).json({ success: true, message: "Product updated succesfully", results })
+    clearUploads();
   } catch (err) {
     if (err) console.log(err)
   }

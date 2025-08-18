@@ -13,6 +13,7 @@ const socketIO = require("./controllers/chat/socket")
 const adminRoutes = require("./routes/admin");
 const rootRoutes = require("./routes/root")
 const cors = require("cors");
+const { clearUploads } = require("./utils/clearuploads")
 
 const MongoStore = require("connect-mongo");
 
@@ -38,7 +39,7 @@ require("./config/cloudinary");
 require("./config/passport");
 app.use(passport.initialize());
 app.use(passport.session());
-
+clearUploads()
 //logging the current user / session to ascertain current user
 //app.use((req, res, next) => {
 //  console.log(req.session);
