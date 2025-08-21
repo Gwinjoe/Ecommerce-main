@@ -24,6 +24,7 @@ exports.get_user = async (req, res) => {
     if (!data) {
       return res.status(401).json({ success: false, message: "No user Found!" });
     }
+    console.log(data)
     res.status(200).json({ success: true, data })
   } catch (err) {
     if (err) {
@@ -99,6 +100,7 @@ exports.edit_user = async (req, res) => {
 
     if (location) {
       existingUser.location = location;
+      console.log(location)
     }
     const results = await existingUser.save();
     console.log(results);

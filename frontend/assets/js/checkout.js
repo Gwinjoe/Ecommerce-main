@@ -1,6 +1,10 @@
 import { gsap } from "gsap";
+import { calculateShippingFee } from "./feeCalculator.js"
+import { updateHeaderView, getUserLocation } from "./user-details.js"
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  await updateHeaderView();
+  await getUserLocation();
   // Elements
   const form = document.querySelector(".checkout-form");
   const placeOrderBtn = document.querySelector(".btn-place-order");
@@ -11,6 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const totalElement = document.querySelector(".summary-total");
   const summaryItems = document.querySelector(".summary-items");
   const shippingElement = document.querySelector(".shipping-fee");
+  const state = document.querySelector("#state");
   const cartCount = document.querySelector('.cart-count');
   const loader = document.createElement("div");
   loader.className = "checkout-loader";
@@ -23,7 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let cart = JSON.parse(localStorage.getItem('cart')) || [];
   let discount = 0;
   let discountType = null;
-  const shippingCost = 1000.00;
+  const shippingCost = 0;
   let currentUser = null; // Store user data
 
   // Nigerian currency formatter
@@ -48,11 +53,11 @@ document.addEventListener("DOMContentLoaded", () => {
         if (currentUser) {
           document.getElementById('full-name').value = currentUser.name || '';
           document.getElementById('email').value = currentUser.email || '';
-          document.getElementById('address').value = currentUser.address.addr || '';
-          document.getElementById('city').value = currentUser.address.city || '';
-          document.getElementById('postal-code').value = currentUser.address.postalCode || currentUser.location.ipdata.postalCode || '';
-          document.getElementById('phone').value = currentUser.phoneNumber || '';
-          document.getElementById('')
+          document.getElementById('address').value = currentUser.address.address ? currentUser.address.address : '';
+          document.getElementById('city').value = currentUser.address.city ? currentUser.address.city : '';
+          document.getElementById('postal-code').value = (currentUser.address.postalCode || currentUser.location.ipdetails.ipdata.postalCode) ? currentUser.address.postalCode || currentUser.location.ipdetails.ipdata.postalCode : '';
+          document.getElementById('phone').value = currentUser.phoneNo || '';
+          document.getElementById('state').value = currentUser.address.state ? currentUser.address.state : '';
         }
       }
     } catch (error) {
@@ -78,6 +83,9 @@ document.addEventListener("DOMContentLoaded", () => {
       discountAmount = discount;
     }
 
+    const stateValue = state.value;
+    let { totalFee } = calculateShippingFee(subtotal, stateValue, 20)
+    shippingCost = totalFee;
     const total = subtotal - discountAmount + shippingCost;
 
     return {

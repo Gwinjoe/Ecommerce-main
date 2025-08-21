@@ -67,7 +67,7 @@ export const getUserLocation = async () => {
     console.log(`Accuracy: ${accuracy} meters`);
 
     const locationDetails = await useapi();
-
+    console.log("successfull - " + locationDetails)
     return {
       geolocation: {
         lat: latitude,
@@ -78,7 +78,7 @@ export const getUserLocation = async () => {
     }
   }
 
-
+  const user = await fetchCurrentUser();
 
   async function errorCallback(error) {
     switch (error.code) {
@@ -97,6 +97,7 @@ export const getUserLocation = async () => {
     }
 
     const locationDetails = await useapi();
+    console.log(locationDetails)
     return {
       geolocation: {
         lat: "",
@@ -108,14 +109,14 @@ export const getUserLocation = async () => {
   }
 
   if (navigator.geolocation) {
-    const location = navigator.geolocation.getCurrentPosition(successCallback, errorCallback, options);
+    const locationDetails = navigator.geolocation.getCurrentPosition(successCallback, errorCallback, options);
 
     const response = await fetch("/api/edit_user", {
-      method: "POST",
+      method: "PUT",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ location })
+      body: JSON.stringify({ id: user._id, location: locationDetails })
     });
 
     const { success, results } = await response.json();
@@ -127,11 +128,11 @@ export const getUserLocation = async () => {
     console.error("Geolocation is not supported by this browser.");
     const locationDetails = await useapi();
     const response = await fetch("/api/edit_user", {
-      method: "POST",
+      method: "PUT",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ locationDetails })
+      body: JSON.stringify({ id: user._id, location: locationDetails })
     });
 
     const { success, results } = await response.json();

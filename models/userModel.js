@@ -36,11 +36,30 @@ const userSchema = mongoose.Schema({
     type: String,
   },
   address: {
-    type: String,
+    address: {
+      type: String
+    },
+    city: {
+      type: String
+    },
+    state: {
+      type: String
+    },
+    country: {
+      type: String,
+      default: "Nigeria",
+    },
+    postalCode: {
+      type: String
+    },
   },
   location: {
-    type: Map,
-    select: false
+    geolocation: {
+      type: Map,
+    },
+    ipdetails: {
+      type: Map,
+    }
   },
   active: {
     type: Boolean,
