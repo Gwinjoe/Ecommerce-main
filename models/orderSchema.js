@@ -29,12 +29,6 @@ const orderSchema = mongoose.Schema({
     ref: "User",
     required: true,
   },
-  shippingAddress: {
-    type: String,
-    default: function() {
-      return this.customer.address
-    }
-  },
   coupon: {
     type: String,
   },
@@ -46,28 +40,9 @@ const orderSchema = mongoose.Schema({
     transactionId: String,
     method: String,
   },
-  // const orderData = {
-  //       customer: {
-  //         userId: currentUser?._id || null,
-  //         name: document.getElementById("full-name").value,
-  //         email: document.getElementById("email").value,
-  //         address: document.getElementById("address").value,
-  //         city: document.getElementById("city").value,
-  //         phone: document.getElementById("phone").value,
-  //         postalCode: document.getElementById("postal-code").value
-  //       },
-  //       items: cart,
-  //       coupon: couponInput.value.trim() || null,
-  //       totals: calculateTotals(),
-  //       payment: {
-  //         reference: paymentReference,
-  //         transactionId,
-  //         method: "flutterwave"
-  //       }
-  //     };
-  //
-  //
-
+  paymentMethod: {
+    type: String,
+  }
 
 }, {
   timestamps: true,

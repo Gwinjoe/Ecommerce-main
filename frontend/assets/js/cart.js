@@ -1,7 +1,8 @@
 import { gsap } from "gsap";
+import { updateHeaderView } from "./user-details.js"
 
 document.addEventListener("DOMContentLoaded", () => {
-
+  updateHeaderView();
   const cart = JSON.parse(localStorage.getItem('cart')) || [];
   const cartItemsContainer = document.querySelector(".cart-items");
   const cartCountElement = document.querySelector(".cart-count");

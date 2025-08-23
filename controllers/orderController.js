@@ -1,5 +1,6 @@
 const Orders = require("../models/orderSchema");
-
+const User = require("../models/userModel")
+const { dohash, dohashValidation, hmacProcess } = require("../utils/hashing");
 
 exports.order_count = async (req, res) => {
   const count = await Orders.countDocuments({});
@@ -41,17 +42,46 @@ exports.add_order = async (req, res) => {
   const { orderId, items, customer } = req.body;
   try {
     console.log(orderId, items, customer);
-    return;
-    const { userId, shippingAddress } = customer;
+    const { userId, address, postalCode, phone, country, city, email, name, state } = customer;
+
+    const existingUser = await User.findById(userId);
+
+    const password = `${name.slice(" ")[0]}${Math.floor(Math.random() * 3000000)}`;
+    const hashedPassword = await dohash(password, 12);
+    if (!existingUser) {
+      const newUser = await new User({
+        email,
+        name,
+        phone,
+        address: {
+          address,
+          country,
+          city,
+          postalCode: postalCode ? postalCode : "",
+          state,
+        },
+        password: hashedPassword
+      })
+
+      const result = await newUser.save();
+      console.log(result)
+      userId = result._id;
+
+    } else {
+      existingUser.address = {
+        address, country, city, postalCode: postalCode ? postalCode : "", state
+      }
+      await existingUser.save();
+    }
     const products = items || [];
     const newOrder = await new Orders({
       orderId,
       products,
       customer: userId,
-      shippingAddress
     })
 
     const result = await newOrder.save();
+    console.log(result)
     res.status(201).json({ success: true, message: "Your order has been created successfuly", result });
   } catch (error) {
     console.log(error)

@@ -25,8 +25,7 @@ export const updateHeaderView = async () => {
 
   try {
     const currentUser = await fetchCurrentUser();
-    if (currentUser.success) {
-      alert("user found " + currentUser.data.name)
+    if (currentUser) {
       const authlinks = document.querySelector(".auth-links");
       const html = `
       <i class="fas fa-user"></i>

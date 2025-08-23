@@ -31,7 +31,7 @@ const userSchema = mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Product"
   }],
-  phoneNo: {
+  phone: {
     trim: true,
     type: String,
   },

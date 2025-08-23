@@ -138,19 +138,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       summaryItems.appendChild(summaryItem);
     });
 
-    // Animate items
-    gsap.from(".summary-item", {
-      opacity: 0,
-      y: 30,
-      duration: 0.8,
-      stagger: 0.2,
-      scrollTrigger: {
-        trigger: ".summary-items",
-        start: "top 80%",
-        toggleActions: "play none none none"
-      }
-    });
-
     updateOrderSummary();
   };
 
@@ -219,6 +206,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           address: document.getElementById("address").value,
           city: document.getElementById("city").value,
           phone: document.getElementById("phone").value,
+          state: document.getElementById("state").value,
           country: document.getElementById("country").value,
           postalCode: document.getElementById("postal-code").value || "",
         },
@@ -233,7 +221,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       };
 
       // Send order to backend
-      const response = await fetch("/api/order", {
+      const response = await fetch("/api/add_order", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -272,6 +260,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const totals = calculateTotals();
     const customerName = document.getElementById("full-name").value;
     const customerEmail = document.getElementById("email").value;
+    const customerPhone = document.getElementById("phone").value;
 
     const txRef = `ORD_SWISS-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
 
@@ -283,9 +272,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       payment_options: "card, banktransfer, ussd",
       redirect_url: "",
       customer: {
-        id: currentUser._id,
         email: customerEmail,
         name: customerName,
+        phone_number: customerPhone,
       },
       customizations: {
         title: "SWISSTools",
