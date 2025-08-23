@@ -1,9 +1,9 @@
 import { updateHeaderView, useapi } from "./user-details.js";
-let ipapi;
+let ip;
 document.addEventListener('DOMContentLoaded', async () => {
   updateHeaderView();
-  const { ip: ipapi } = await useapi();
-  ipapi = ip;
+  const { ipapi } = await useapi();
+  ip = ipapi;
   const elements = {
     menuToggle: document.getElementById('menu-toggle'),
     navMenu: document.getElementById('nav-menu'),
@@ -75,10 +75,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const formatCurrency = (amount) => {
     const value = amount?.$numberDecimal ? parseFloat(amount.$numberDecimal) : parseFloat(amount);
-    if (ipapi.currency !== "NGN") {
+    if (ip.currency !== "NGN") {
       return new Intl.NumberFormat('en-NG', {
         style: 'currency',
-        currency: ipapi.currency,
+        currency: ip.currency,
         minimumFractionDigits: 2
       }).format(amount)
     }
@@ -117,9 +117,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     state.brands = await fetchData('/api/brands');
     state.products = await fetchData('/api/products');
 
-    if (ipapi.currency !== "NGN") {
+    if (ip.currency !== "NGN") {
       state.products.forEach((product) => {
-        product.price.$numberDecimal = convert(product.price.$numberDecimal, ipapi.currency)
+        product.price.$numberDecimal = convert(product.price.$numberDecimal, ip.currency)
       })
     }
 

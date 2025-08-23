@@ -4,7 +4,6 @@ import { updateHeaderView, getUserLocation } from "./user-details.js"
 
 document.addEventListener("DOMContentLoaded", async () => {
   await updateHeaderView();
-  await getUserLocation();
   // Elements
   const form = document.querySelector(".checkout-form");
   const placeOrderBtn = document.querySelector(".btn-place-order");
@@ -28,7 +27,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   let cart = JSON.parse(localStorage.getItem('cart')) || [];
   let discount = 0;
   let discountType = null;
-  const shippingCost = 0;
+  let shippingCost = 0;
   let currentUser = null; // Store user data
 
   // Nigerian currency formatter
@@ -66,7 +65,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   };
 
   const updateCartCount = () => {
-    const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+    const totalItems = cart.length;
     cartCount.textContent = totalItems;
   };
 
@@ -83,14 +82,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       discountAmount = discount;
     }
 
-    const stateValue = state.value;
-    let { totalFee } = calculateShippingFee(subtotal, stateValue, 20)
+    const stateValue = state.value !== "" ? state.value : "Rivers";
+    const { totalFee } = calculateShippingFee(subtotal, stateValue, 20)
     shippingCost = totalFee;
     const total = subtotal - discountAmount + shippingCost;
 
     return {
       subtotal,
       discountAmount,
+      shippingCost,
       total
     };
   };
@@ -101,7 +101,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     subtotalElement.textContent = formatCurrency(totals.subtotal);
     discountElement.textContent = formatCurrency(totals.discountAmount);
     totalElement.textContent = formatCurrency(totals.total);
-    shippingElement.textContent = formatCurrency(shippingCost);
+    shippingElement.textContent = formatCurrency(totals.shippingCost);
   };
 
   const renderOrderItems = () => {
@@ -343,12 +343,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   };
 
   const initCheckout = async () => {
+    updateCartCount();
     // Fetch user data first
     await fetchCurrentUser();
 
     // Then render the rest
     renderOrderItems();
-    updateCartCount();
     applyCouponBtn.addEventListener("click", applyCoupon);
     placeOrderBtn.addEventListener("click", placeOrder);
 

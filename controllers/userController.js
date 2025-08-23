@@ -18,14 +18,18 @@ exports.get_users = async (req, res) => {
 }
 
 exports.get_user = async (req, res) => {
-  const id = req.user._id;
+  const id = req.user ? req.user._id : "";
   try {
-    const data = await User.findById(id).select("+location");
-    if (!data) {
-      return res.status(401).json({ success: false, message: "No user Found!" });
+    if (id) {
+      const data = await User.findById(id).select("+location");
+      if (!data) {
+        return res.status(401).json({ success: false, message: "No user Found!" });
+      }
+      console.log(data)
+      res.status(200).json({ success: true, data })
+    } else {
+      return res.status(401).json({ success: false, message: "invalid user id" })
     }
-    console.log(data)
-    res.status(200).json({ success: true, data })
   } catch (err) {
     if (err) {
       console.log(err)

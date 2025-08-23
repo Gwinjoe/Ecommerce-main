@@ -11,7 +11,11 @@ export const fetchCurrentUser = async () => {
     if (data.success) {
       let currentUser = data.data;
       return currentUser;
+    } else {
+
+      return { success: false, message: "user not found" };
     }
+
   } catch (error) {
     console.error('Error fetching user:', error);
   }
@@ -20,7 +24,7 @@ export const fetchCurrentUser = async () => {
 export const updateHeaderView = async () => {
   try {
     const currentUser = await fetchCurrentUser();
-    if (currentUser) {
+    if (currentUser.success) {
       const authlinks = document.querySelector(".auth-links");
       const html = `
       <i class="fas fa-user"></i>
@@ -116,7 +120,7 @@ export const getUserLocation = async () => {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ id: user._id, location: locationDetails })
+      body: JSON.stringify({ id: user ? user._id : "", location: locationDetails })
     });
 
     const { success, results } = await response.json();
@@ -132,7 +136,7 @@ export const getUserLocation = async () => {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ id: user._id, location: locationDetails })
+      body: JSON.stringify({ id: user ? user._id : "", location: locationDetails })
     });
 
     const { success, results } = await response.json();

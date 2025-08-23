@@ -39,18 +39,18 @@ router.get("/faq", (req, res) => {
 })
 
 
-router.get("/product", isLoggedIn, (req, res) => {
+router.get("/product", (req, res) => {
   res.sendFile(path.join(__dirname, "..", "frontend", "product.html"));
 });
 
-router.get("/shop", isLoggedIn, (req, res) => {
+router.get("/shop", (req, res) => {
   res.sendFile(path.join(__dirname, "..", "frontend", "shop.html"));
 });
 
 router.get("/chat", isLoggedIn, (req, res) => {
   res.sendFile(path.join(__dirname, "..", "frontend", "chat.html"));
 });
-router.get("/cart", isLoggedIn, (req, res) => {
+router.get("/cart", (req, res) => {
   res.sendFile(path.join(__dirname, "..", "frontend", "cart.html"));
 });
 //user routes
