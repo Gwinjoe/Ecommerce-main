@@ -255,7 +255,7 @@ exports.get_product_by_id = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const result = await Product.findById(id);
+    const result = await Product.findById(id).populate("category");
     if (!result) {
       return res.status(401).json({ success: false, message: "No Product matches that id" });
     }

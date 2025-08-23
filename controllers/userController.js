@@ -18,7 +18,7 @@ exports.get_users = async (req, res) => {
 }
 
 exports.get_user = async (req, res) => {
-  const id = req.user ? req.user._id : "";
+  const id = req.user._id;
   try {
     if (id) {
       const data = await User.findById(id).select("+location");
@@ -28,6 +28,7 @@ exports.get_user = async (req, res) => {
       console.log(data)
       res.status(200).json({ success: true, data })
     } else {
+      console.log("no user found")
       return res.status(401).json({ success: false, message: "invalid user id" })
     }
   } catch (err) {

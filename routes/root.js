@@ -40,7 +40,7 @@ router.get("/faq", (req, res) => {
 
 
 router.get("/product", (req, res) => {
-  res.sendFile(path.join(__dirname, "..", "frontend", "product.html"));
+  res.sendFile(path.join(__dirname, "..", "frontend", "newproduct.html"));
 });
 
 router.get("/shop", (req, res) => {

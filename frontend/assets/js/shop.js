@@ -240,7 +240,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                alt="${product.name}" 
                loading="lazy">
           <h2 class="product-name">
-            <a href="product.html?id=${product._id}" class="product-link">${product.name}</a>
+            <a href="/product?id=${product._id}" class="product-link">${product.name}</a>
           </h2>
           <p class="brand">${product.brand?.name || 'No Brand'}</p>
           <div class="rating">

@@ -104,6 +104,7 @@ router.get("/logout", signout);
 router.get("/signout", adminSignout);
 
 router.get("/products", getProducts);
+router.get("/product/:id", get_product_by_id);
 router.get("/edit_product/:id", get_product_by_id);
 router.post('/add_product',
   upload.fields([

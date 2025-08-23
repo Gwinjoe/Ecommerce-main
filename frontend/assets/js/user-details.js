@@ -1,9 +1,9 @@
-const getConfig = async () => {
+export const getConfig = async () => {
   const config = await fetch("/api/config");
   const { ipdatakey } = await config.json();
   return ipdatakey
 }
-export const fetchCurrentUser = async () => {
+const fetchCurrentUser = async () => {
   try {
     const response = await fetch('/api/user');
     const data = await response.json();
@@ -22,9 +22,11 @@ export const fetchCurrentUser = async () => {
 };
 
 export const updateHeaderView = async () => {
+
   try {
     const currentUser = await fetchCurrentUser();
     if (currentUser.success) {
+      alert("user found " + currentUser.data.name)
       const authlinks = document.querySelector(".auth-links");
       const html = `
       <i class="fas fa-user"></i>
