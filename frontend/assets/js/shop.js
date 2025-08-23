@@ -1,7 +1,9 @@
 import { updateHeaderView, useapi } from "./user-details.js";
-const { ipapi } = await useapi();
-document.addEventListener('DOMContentLoaded', () => {
+let ipapi;
+document.addEventListener('DOMContentLoaded', async () => {
   updateHeaderView();
+  const { ip: ipapi } = await useapi();
+  ipapi = ip;
   const elements = {
     menuToggle: document.getElementById('menu-toggle'),
     navMenu: document.getElementById('nav-menu'),
