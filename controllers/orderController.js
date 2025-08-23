@@ -39,7 +39,7 @@ exports.get_order_by_id = async (req, res) => {
 }
 
 exports.add_order = async (req, res) => {
-  const { orderId, items, customer } = req.body;
+  const { orderId, items, customer, totalPrice, payment, coupon } = req.body;
   try {
     console.log(orderId, items, customer);
     const { userId, address, postalCode, phone, country, city, email, name, state } = customer;
@@ -68,16 +68,20 @@ exports.add_order = async (req, res) => {
       userId = result._id;
 
     } else {
+      existingUser.phone = phone
       existingUser.address = {
         address, country, city, postalCode: postalCode ? postalCode : "", state
       }
       await existingUser.save();
     }
-    const products = items || [];
+    const products = items.map(item => { product: item.id, quantity: item.quantity }) || [];
     const newOrder = await new Orders({
       orderId,
       products,
       customer: userId,
+      totalPrice,
+      coupon,
+      payment,
     })
 
     const result = await newOrder.save();

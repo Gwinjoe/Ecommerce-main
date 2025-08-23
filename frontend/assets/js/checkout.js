@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   let discountType = null;
   let shippingCost = 0;
   let currentUser = null; // Store user data
-
+  console.log(cart)
   let fullhtml = '<option id="novalue" value="">Select State</option> ';
   Object.keys(distances).forEach((state) => {
     const html = `
@@ -63,7 +63,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           document.getElementById('address').value = currentUser.address.address ? currentUser.address.address : '';
           document.getElementById('city').value = currentUser.address.city ? currentUser.address.city : '';
           document.getElementById('postal-code').value = (currentUser.address.postalCode || currentUser.location.ipdetails.ipdata.postalCode) ? currentUser.address.postalCode || currentUser.location.ipdetails.ipdata.postalCode : '';
-          document.getElementById('phone').value = currentUser.phoneNo || '';
+          document.getElementById('phone').value = currentUser.phone || '';
           document.getElementById('state').value = currentUser.address.state ? currentUser.address.state : '';
         }
       }

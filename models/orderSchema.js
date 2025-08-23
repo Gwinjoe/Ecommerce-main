@@ -20,7 +20,7 @@ const orderSchema = mongoose.Schema({
     totalPrice: {
       type: mongoose.Types.Decimal128,
       default: function() {
-        return this.product.price.$numberDecimal * this.quantity
+        return this.product.totalPrice.$numberDecimal * this.quantity
       }
     }
   }],
