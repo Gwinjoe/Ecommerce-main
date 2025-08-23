@@ -10,7 +10,7 @@ router.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "..", "frontend", "roots.html"));
 });
 
-router.get("/", (req, rex) => {
+router.get("/ratings", (req, res) => {
   res.sendFile(path.join(__dirname, "..", "frontend", "ratings.html"));
 })
 
@@ -80,4 +80,7 @@ router.get("/wishlist", isLoggedIn, (req, res) => {
 
 // on hold for routes for checkout
 
+router.get("/checkout", (req, res) => {
+  res.sendFile(path.join(__dirname, "..", "frontend", "checkout.html"));
+})
 module.exports = router;

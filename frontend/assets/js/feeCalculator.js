@@ -1,7 +1,7 @@
 // Shipping Fee Calculator (Port Harcourt as Origin)
 
 // Distances in km (approx road distances from Port Harcourt)
-const distances = {
+export const distances = {
   "Abia": 61,
   "Adamawa": 1080,
   "Akwa Ibom": 72,
@@ -44,7 +44,10 @@ const distances = {
 // Function to calculate shipping fee
 export function calculateShippingFee(itemPrice, destination, ratePerKm = 20) {
   if (!distances[destination]) {
-    return `Destination "${destination}" not found in database.`;
+    return {
+      totalFee: 0,
+
+    }
   }
 
   let distance = distances[destination];

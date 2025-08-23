@@ -1,9 +1,9 @@
 import { gsap } from "gsap";
-import { calculateShippingFee } from "./feeCalculator.js"
+import { calculateShippingFee, distances } from "./feeCalculator.js"
 import { updateHeaderView, getUserLocation } from "./user-details.js"
 
 document.addEventListener("DOMContentLoaded", async () => {
-  await updateHeaderView();
+  updateHeaderView();
   // Elements
   const form = document.querySelector(".checkout-form");
   const placeOrderBtn = document.querySelector(".btn-place-order");
@@ -30,6 +30,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   let shippingCost = 0;
   let currentUser = null; // Store user data
 
+  let fullhtml = '<option id="novalue" value="">Select State</option> ';
+  Object.keys(distances).forEach((state) => {
+    const html = `
+        <option id="${state}" value="${state}">${state}</option>
+`;
+    fullhtml += html;
+  })
+  state.innerHTML = fullhtml;
   // Nigerian currency formatter
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-NG', {
@@ -82,9 +90,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       discountAmount = discount;
     }
 
-    const stateValue = state.value !== "" ? state.value : "Rivers";
+    const stateValue = state.value;
     const { totalFee } = calculateShippingFee(subtotal, stateValue, 20)
-    shippingCost = totalFee;
+    shippingCost = parseFloat(totalFee);
     const total = subtotal - discountAmount + shippingCost;
 
     return {
@@ -94,6 +102,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       total
     };
   };
+
+  state.addEventListener("change", () => {
+    updateOrderSummary();
+  })
 
   const updateOrderSummary = () => {
     const totals = calculateTotals();
@@ -207,7 +219,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           address: document.getElementById("address").value,
           city: document.getElementById("city").value,
           phone: document.getElementById("phone").value,
-          postalCode: document.getElementById("postal-code").value
+          country: document.getElementById("country").value,
+          postalCode: document.getElementById("postal-code").value || "",
         },
         items: cart,
         coupon: couponInput.value.trim() || null,
@@ -260,16 +273,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     const customerName = document.getElementById("full-name").value;
     const customerEmail = document.getElementById("email").value;
 
-    // Generate unique transaction reference
     const txRef = `ORD_SWISS-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
 
     FlutterwaveCheckout({
-      public_key: flwpubkey, // Replace with your public key
+      public_key: flwpubkey,
       tx_ref: txRef,
       amount: totals.total,
       currency: "NGN",
       payment_options: "card, banktransfer, ussd",
-      redirect_url: "", // Optional redirect URL
+      redirect_url: "",
       customer: {
         id: currentUser._id,
         email: customerEmail,
@@ -278,7 +290,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       customizations: {
         title: "SWISSTools",
         description: `Payment for ${cart.length} items`,
-        logo: "assets/images/swisstools_logo.png", // Replace with your logo
+        logo: "assets/images/swisstools_logo.png",
       },
       callback: function(response) {
         if (response.status === "successful") {
@@ -290,14 +302,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       },
       onclose: function() {
-        // Payment modal closed
         document.body.removeChild(loader);
         placeOrderBtn.disabled = false;
       }
     });
   };
 
-  // Handle place order button click
   const placeOrder = () => {
     const inputs = form.querySelectorAll("input[required]");
     let isValid = true;
