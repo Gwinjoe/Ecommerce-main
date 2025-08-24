@@ -44,7 +44,7 @@ exports.add_order = async (req, res) => {
     console.log(orderId, items, customer);
     const { userId, address, postalCode, phone, country, city, email, name, state } = customer;
 
-    const existingUser = await User.findById(userId);
+    const existingUser = await User.findOne({ email });
 
     const password = `${name.slice(" ")[0]}${Math.floor(Math.random() * 3000000)}`;
     const hashedPassword = await dohash(password, 12);
