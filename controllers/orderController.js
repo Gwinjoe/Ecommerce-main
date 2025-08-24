@@ -11,7 +11,7 @@ exports.order_count = async (req, res) => {
 
 exports.getOrders = async (req, res) => {
   try {
-    const data = await Orders.find().sort({ createdAt: -1 }).populate("customer").populate("product");
+    const data = await Orders.find().sort({ createdAt: -1 }).populate("customer").populate({ path: "products.product", select: "name price" });
     if (!data) {
       return res.status(401).json({ success: false, message: "No Order Found!" });
     }
@@ -27,7 +27,7 @@ exports.get_order_by_id = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const result = await Orders.findById(id);
+    const result = await Orders.findById(id).populate("customer").populate({ path: "products.product", select: "name price" });
     if (!result) {
       return res.status(401).json({ success: false, message: "No order matches that id" });
     }
@@ -74,12 +74,12 @@ exports.add_order = async (req, res) => {
       }
       await existingUser.save();
     }
-    const products = items.map(item => { product: item.id, quantity: item.quantity }) || [];
+    const products = items.map((item) => { return { product: item.id, quantity: item.quantity, totalPrice: item.price * item.quantity } }) || [];
     const newOrder = await new Orders({
       orderId,
       products,
       customer: userId,
-      totalPrice,
+      totalPrice: totalPrice.total,
       coupon,
       payment,
     })
@@ -104,8 +104,9 @@ exports.edit_order = async (req, res) => {
     if (status) {
       existingOrder.status = status;
     }
+
     const results = await existingOrder.save();
-    res.status(201).json({ success: true, results })
+    res.status(201).json({ success: true, message: "Order Status Updated", results })
   } catch (err) {
     if (err) console.log(err)
   }

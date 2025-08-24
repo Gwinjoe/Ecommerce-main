@@ -158,14 +158,14 @@ exports.deletefrom_cart = async (req, res) => {
 exports.deletefrom_wishlist = async (req, res) => {
   const { userId, itemId } = req.body;
   try {
-    const existingUser = await User.findById(userId);
+    const existingUser = await User.findByIdAndUpdate(
+      userId,
+      { $pull: { wishlist: itemId } },
+    );
     if (!existingUser) {
       return res.status(401).json({ success: false, message: "User not found" })
     }
-
-    existingUser.wishlist.filter((product) => product._id !== itemId);
-    const results = await existingUser.save();
-    res.status(201).json({ success: true, message: "Item added successfully" });
+    res.status(201).json({ success: true, message: "Item removed successfully" });
   } catch (err) {
     if (err) console.log(err);
     res.status(500).json({ success: false, message: "something went wrong" });
@@ -199,9 +199,12 @@ exports.addTo_wishlist = async (req, res) => {
       return res.status(401).json({ success: false, message: "User not found" })
     }
 
-    if (item) {
+    if (item && !existingUser.wishlist.find(itemid => itemid == item)) {
       existingUser.wishlist.push(item);
+    } else {
+      return res.status(403).json({ success: true, message: "Item already exists" })
     }
+
     const results = await existingUser.save();
     res.status(201).json({ success: true, message: "Item added successfully" });
   } catch (err) {

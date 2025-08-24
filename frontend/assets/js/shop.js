@@ -1,9 +1,10 @@
-import { updateHeaderView, useapi } from "./user-details.js";
+import { updateHeaderView, useapi, fetchCurrentUser } from "./user-details.js";
 let ip;
 document.addEventListener('DOMContentLoaded', async () => {
   updateHeaderView();
   const { ipapi } = await useapi();
   ip = ipapi;
+  const user = await fetchCurrentUser();
   const elements = {
     menuToggle: document.getElementById('menu-toggle'),
     navMenu: document.getElementById('nav-menu'),
@@ -51,7 +52,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     compareList: JSON.parse(localStorage.getItem('compare')) || [],
     recentlyViewedList: JSON.parse(localStorage.getItem('recentlyViewed')) || [],
     currentPage: 1,
-    itemsPerPage: 8,
+    itemsPerPage: 20,
     isGridView: true,
     currentFilters: {
       search: '',
@@ -255,7 +256,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <button type="button" class="quick-view" aria-label="Quick view ${product.name}">
               <i class="fas fa-eye"></i>
             </button>
-            <button type="button" class="wishlist" aria-label="Add ${product.name} to wishlist">
+            <button type="button" class="wishlist" style="color: ${user && user.wishlist.find(item => item == product._id) ? 'red' : 'white'};" aria-label="Add ${product.name} to wishlist">
               <i class="fas fa-heart"></i>
             </button>
             <button type="button" class="compare" aria-label="Compare ${product.name}">
@@ -267,6 +268,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     return productCard;
   };
+
 
   const applyFilters = () => {
     return state.products.filter(product => {
@@ -518,6 +520,40 @@ document.addEventListener('DOMContentLoaded', async () => {
     showCartFeedback('Added to cart!');
   };
 
+  const addToWishlist = async (productId) => {
+    if (user) {
+      const response = await fetch("/api/add_to_wishlist", {
+        method: "PATCH",
+        headers: {
+          "Content-type": "application/json",
+        },
+        body: JSON.stringify({ id: user._id, item: productId }),
+      });
+      const { success, message } = await response.json();
+
+      if (success) {
+        showCartFeedback(message);
+      }
+
+    }
+  }
+
+  const removeFromWishlist = async (productId) => {
+    if (user) {
+      const response = await fetch("/api/delete_from_wishlist", {
+        method: "PATCH",
+        headers: {
+          "Content-type": "application/json",
+        },
+        body: JSON.stringify({ userId: user._id, itemId: productId }),
+      });
+      const { success, message } = await response.json();
+
+      if (success) {
+        showCartFeedback(message);
+      }
+    }
+  }
   initShop();
 
   elements.menuToggle.addEventListener('click', () => {
@@ -530,7 +566,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   elements.listViewBtn.addEventListener('click', () => toggleViewMode(false));
   elements.resetFilters.addEventListener('click', resetFilters);
 
-  elements.productGrid.addEventListener('click', (e) => {
+  elements.productGrid.addEventListener('click', async (e) => {
     const productCard = e.target.closest('.product-item');
     if (!productCard) return;
 
@@ -542,6 +578,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.target.closest('.add-to-cart')) {
       addToCart(productId);
       e.stopPropagation();
+    }
+
+    if (e.target.closest('.wishlist')) {
+
+      const wishbutton = e.target.closest(".wishlist");
+      if (wishbutton.style.color === "red") {
+        await removeFromWishlist(productId);
+        wishbutton.style.color = "white"
+        e.stopPropagation();
+      } else {
+        await addToWishlist(productId);
+        wishbutton.style.color = "red"
+        e.stopPropagation();
+      }
     }
 
     if (e.target.closest('.quick-view')) {

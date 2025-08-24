@@ -4,7 +4,7 @@ const orderSchema = mongoose.Schema({
   status: {
     type: String,
     required: true,
-    default: "Pending"
+    default: "pending"
   },
   products: [{
     product: {
@@ -20,7 +20,7 @@ const orderSchema = mongoose.Schema({
     totalPrice: {
       type: mongoose.Types.Decimal128,
       default: function() {
-        return this.product.totalPrice.$numberDecimal * this.quantity
+        return this.product.price.$numberDecimal * this.quantity
       }
     }
   }],

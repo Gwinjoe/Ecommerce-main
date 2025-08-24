@@ -62,9 +62,9 @@ document.addEventListener("DOMContentLoaded", async () => {
           document.getElementById('email').value = currentUser.email || '';
           document.getElementById('address').value = currentUser.address.address ? currentUser.address.address : '';
           document.getElementById('city').value = currentUser.address.city ? currentUser.address.city : '';
-          document.getElementById('postal-code').value = (currentUser.address.postalCode || currentUser.location.ipdetails.ipdata.postalCode) ? currentUser.address.postalCode || currentUser.location.ipdetails.ipdata.postalCode : '';
           document.getElementById('phone').value = currentUser.phone || '';
           document.getElementById('state').value = currentUser.address.state ? currentUser.address.state : '';
+          document.getElementById('postal-code').value = (currentUser.address.postalCode || currentUser.location.ipdetails.ipdata.postalCode) ? currentUser.address.postalCode || currentUser.location.ipdetails.ipdata.postalCode : '';
         }
       }
     } catch (error) {
@@ -238,7 +238,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         updateCartCount();
 
         // Redirect to success page
-        window.location.href = "/order-success.html";
+        window.location.href = "/order-success";
       } else {
         throw new Error(data.message || "Failed to create order");
       }

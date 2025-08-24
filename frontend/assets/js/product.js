@@ -1,10 +1,12 @@
 import { gsap } from "gsap";
+import { updateHeaderView } from "./user-details.js"
 
 document.addEventListener("DOMContentLoaded", () => {
   // Get product ID from URL
   const urlParams = new URLSearchParams(window.location.search);
   const productId = urlParams.get('id');
 
+  updateHeaderView()
   // Elements
   const spinner = document.getElementById('spinner');
   const productTitle = document.getElementById('productTitle');
@@ -100,6 +102,22 @@ document.addEventListener("DOMContentLoaded", () => {
     productCategory.textContent = `Category: ${product.category?.name || 'Uncategorized'}`;
     productPrice.textContent = formatCurrency(product.price);
     productDescription.textContent = product.description || 'No description available';
+    let featuresHtml = "";
+    product.keyFeatures.forEach(feature => {
+      let html = `<li><i class="fas fa-check-circle"></i>
+                  ${feature}</li>`
+      featuresHtml += html;
+    })
+    document.querySelector(".keyfeatures").innerHTML = featuresHtml || "Features unavailable for this product"
+
+    let boxHtml = "";
+    product.whatsInBox.forEach(item => {
+      let html = `<li>${item}</li>`
+      boxHtml += html;
+    })
+    document.querySelector("#inTheBox").innerHTML = boxHtml || "No Item In Box"
+
+    document.querySelector("#productDetails").textContent = product.productDetails || "No Detail available for this product."
 
     // Set main image
     if (product.images?.mainImage?.url) {

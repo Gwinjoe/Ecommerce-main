@@ -3,7 +3,7 @@ export const getConfig = async () => {
   const { ipdatakey } = await config.json();
   return ipdatakey
 }
-const fetchCurrentUser = async () => {
+export const fetchCurrentUser = async () => {
   try {
     const response = await fetch('/api/user');
     const data = await response.json();
@@ -33,6 +33,7 @@ export const updateHeaderView = async () => {
 `;
       authlinks.innerHTML = html
     }
+
   } catch (err) {
     console.log(err)
   }

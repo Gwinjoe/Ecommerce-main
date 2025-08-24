@@ -53,6 +53,10 @@ router.get("/chat", isLoggedIn, (req, res) => {
 router.get("/cart", (req, res) => {
   res.sendFile(path.join(__dirname, "..", "frontend", "cart.html"));
 });
+
+router.get("/order-success", (req, res) => {
+  res.sendFile(path.join(__dirname, "..", "frontend", "order-sucess.html"))
+})
 //user routes
 router.get("/dashboard", [isLoggedIn, makeActive], (req, res) => {
   res.sendFile(path.join(__dirname, "..", "frontend", "users", "dashboard.html"))

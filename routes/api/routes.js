@@ -132,9 +132,9 @@ router.get("/user/:id", get_user_by_id);
 router.put("/edit_user", edit_user);
 router.delete("/delete_user/:id", delete_user);
 router.post("/add_to_cart", addTo_cart);
-router.post("/add_to_wishlist", addTo_wishlist);
+router.patch("/add_to_wishlist", addTo_wishlist);
 router.post("/delete_from_cart", deletefrom_cart);
-router.post("/delete_from_wishlist", deletefrom_wishlist);
+router.patch("/delete_from_wishlist", deletefrom_wishlist);
 
 router.post("/add_order", add_order);
 router.get("/orders", getOrders);
