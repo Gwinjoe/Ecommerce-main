@@ -83,6 +83,10 @@ exports.add_user = async (req, res) => {
 exports.edit_user = async (req, res) => {
   const { id, name, email, password, admin, location } = req.body;
   try {
+
+    if (id == "688b57cd46225d25fef4cfbc") {
+      return res.status(401).json({ success: false, message: "Can't modify ADMIN" })
+    }
     const existingUser = await User.findById(id).select("+password +location");
 
     if (!existingUser) {
@@ -124,7 +128,7 @@ exports.delete_user = async (req, res) => {
   const { id } = req.params;
 
   try {
-    if (id == req.user._id) {
+    if (id == req.user._id || id === "688b57cd46225d25fef4cfbc") {
       return res.status(401).json({ success: false, message: "Cant delete the current user" });
     }
     const result = await User.findByIdAndDelete(id);

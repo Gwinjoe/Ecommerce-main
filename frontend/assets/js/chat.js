@@ -452,11 +452,22 @@ socket.on("updateMessage", (msg) => {
   renderMessages(msg.room)
 })
 
+function autoScrollToBottom(element, speed) {
+  let scrollInterval = setInterval(() => {
+    if (element.scrollTop + element.clientHeight >= element.scrollHeight) {
+      clearInterval(scrollInterval);
+    } else {
+      element.scrollTop += speed;
+    }
+  }, 50);
+}
+
 let count = 0;
 let activityTimer;
-socket.on("activity", () => {
+socket.on("activity", ({ id }) => {
   if (count < 1) {
     chatMessages.appendChild(loaderEl);
+    autoScrollToBottom(chatMessages, 5);
     count++
   }
 

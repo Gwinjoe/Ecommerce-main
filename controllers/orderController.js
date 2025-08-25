@@ -42,11 +42,12 @@ exports.add_order = async (req, res) => {
   const { orderId, items, customer, totalPrice, payment, coupon } = req.body;
   try {
     console.log(orderId, items, customer);
-    const { userId, address, postalCode, phone, country, city, email, name, state } = customer;
+    let { userId, address, postalCode, phone, country, city, email, name, state } = customer;
 
     const existingUser = await User.findOne({ email });
-
-    const password = `${name.slice(" ")[0]}${Math.floor(Math.random() * 3000000)}`;
+    const specialchars = ["@", "!", "&", "^", "#"];
+    const password = `${name.split(" ")[0]}${specialchars[Math.floor(Math.random * specialchars.length)] || specialchars[0]}${Math.floor(Math.random() * 3000000)}`;
+    console.log(password)
     const hashedPassword = await dohash(password, 12);
     if (!existingUser) {
       const newUser = await new User({

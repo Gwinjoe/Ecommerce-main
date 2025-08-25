@@ -73,7 +73,7 @@ module.exports = function(server, sessionMiddleware) {
 
     socket.on('activity', (id) => {
       if (id) {
-        socket.broadcast.to(id).emit('activity')
+        socket.broadcast.to(id).emit('activity', { id })
       }
     })
 
