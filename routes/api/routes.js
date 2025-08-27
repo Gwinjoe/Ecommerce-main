@@ -2,14 +2,14 @@ require("dotenv").config;
 const express = require("express");
 const router = express.Router();
 const { delete_multiple_products, editMultipleProducts, get_product_by_id, category_count, product_count, edit_product, delete_product, getProducts, add_category, get_categories, edit_category, get_category_by_id, delete_category, add_product } = require("../../controllers/productController")
-const { addTo_cart, addTo_wishlist, deletefrom_cart, deletefrom_wishlist } = require("../../controllers/userController")
+const { addTo_cart, get_wishlist, addTo_wishlist, deletefrom_cart, deletefrom_wishlist } = require("../../controllers/userController")
 const { signup, signout, adminSignout } = require("../../controllers/authController")
 const { get_users, get_user_by_id, edit_user, delete_user, user_count, add_user, get_user } = require("../../controllers/userController")
 const path = require("path");
 const passport = require("passport");
 const multer = require('multer');
 const { deleteAllChats, getChatsThread, getAdminChatsThread, getChats } = require("../../controllers/chat/chatController");
-const { get_order_by_id, add_order, getOrders, delete_multiple_orders, delete_order, edit_order, editMultipleOrders, order_count } = require("../../controllers/orderController")
+const { get_order_by_id, add_order, getOrders, get_user_orders, delete_multiple_orders, delete_order, edit_order, editMultipleOrders, order_count } = require("../../controllers/orderController")
 const { get_brand_by_id, add_brand, getBrands, delete_brand, edit_brand, brand_count } = require("../../controllers/brandController")
 
 const storage = multer.diskStorage({
@@ -131,13 +131,15 @@ router.post("/add_user", add_user);
 router.get("/user/:id", get_user_by_id);
 router.put("/edit_user", edit_user);
 router.delete("/delete_user/:id", delete_user);
-router.post("/add_to_cart", addTo_cart);
+router.patch("/add_to_cart", addTo_cart);
 router.patch("/add_to_wishlist", addTo_wishlist);
-router.post("/delete_from_cart", deletefrom_cart);
+router.patch("/delete_from_cart", deletefrom_cart);
 router.patch("/delete_from_wishlist", deletefrom_wishlist);
+router.get("/wishlist", get_wishlist)
 
 router.post("/add_order", add_order);
 router.get("/orders", getOrders);
+router.get("/user_orders", get_user_orders)
 router.get("/order/:id", get_order_by_id);
 router.put("/edit_order", edit_order);
 router.delete("/delete_order/:id", delete_order);

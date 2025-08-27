@@ -163,7 +163,7 @@ exports.deletefrom_wishlist = async (req, res) => {
   const { userId, itemId } = req.body;
   try {
     const existingUser = await User.findByIdAndUpdate(
-      userId,
+      userId ? userId : req.user._id,
       { $pull: { wishlist: itemId } },
     );
     if (!existingUser) {
@@ -184,8 +184,11 @@ exports.addTo_cart = async (req, res) => {
       return res.status(401).json({ success: false, message: "User not found" })
     }
 
-    if (cartItem) {
+    if (cartItem && !existingUser.cart.find(itemid => itemid == cartItem)) {
       existingUser.cart.push(cartItem);
+    } else {
+      let item = existingUser.cart.find(item => item.product == cartItem);
+      item.quantity += 1;
     }
     const results = await existingUser.save();
     res.status(201).json({ success: true, message: "Item added successfully" });
@@ -214,5 +217,34 @@ exports.addTo_wishlist = async (req, res) => {
   } catch (err) {
     if (err) console.log(err);
     res.status(500).json({ success: false, message: "something went wrong" });
+  }
+}
+
+exports.get_wishlist = async (req, res) => {
+  const id = req.user._id;
+
+  try {
+    const existingUser = await User.findById(id).populate("wishlist");
+    if (!existingUser) {
+      return res.status(401).json({ success: false, message: "user not found" })
+    }
+    res.status(201).json({ success: true, result: existingUser.wishlist })
+  } catch (err) {
+    if (err) console.log(err)
+    res.status(500).json({ success: false, message: "something went wrong" })
+  }
+}
+exports.get_cart = async (req, res) => {
+  const id = req.user._id;
+
+  try {
+    const existingUser = await User.findById(id).populate("cart");
+    if (!existingUser) {
+      return res.status(401).json({ success: false, message: "user not found" })
+    }
+    res.status(201).json({ success: true, result: existingUser.cart })
+  } catch (err) {
+    if (err) console.log(err)
+    res.status(500).json({ success: false, message: "something went wrong" })
   }
 }

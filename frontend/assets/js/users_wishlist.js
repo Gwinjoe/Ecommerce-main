@@ -1,377 +1,431 @@
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-
-gsap.registerPlugin(ScrollTrigger);
-
 document.addEventListener("DOMContentLoaded", () => {
-    // Dummy data for wishlist (increased to 12 items for pagination testing)
-    const wishlistData = [
-        { id: "#W001", item: "Construction Hammer", price: "₦10,000", date: "2025-06-10", status: "In Stock", description: "Heavy-duty hammer for construction", category: "Tools" },
-        { id: "#W002", item: "Power Drill", price: "₦50,000", date: "2025-06-15", status: "Out of Stock", description: "Cordless power drill with multiple bits", category: "Power Tools" },
-        { id: "#W003", item: "Safety Helmet", price: "₦10,000", date: "2025-06-20", status: "In Stock", description: "High-impact safety helmet", category: "Safety Gear" },
-        { id: "#W004", item: "Toolbox", price: "₦25,000", date: "2025-06-25", status: "In Stock", description: "Portable toolbox with compartments", category: "Storage" },
-        { id: "#W005", item: "Wrench Set", price: "₦15,000", date: "2025-07-01", status: "Out of Stock", description: "Set of adjustable wrenches", category: "Tools" },
-        { id: "#W006", item: "Electric Saw", price: "₦60,000", date: "2025-07-05", status: "In Stock", description: "High-power electric saw", category: "Power Tools" },
-        { id: "#W007", item: "Screwdriver Set", price: "₦12,000", date: "2025-07-10", status: "In Stock", description: "Multi-head screwdriver set", category: "Tools" },
-        { id: "#W008", item: "Measuring Tape", price: "₦5,000", date: "2025-07-12", status: "Out of Stock", description: "25ft retractable measuring tape", category: "Tools" },
-        { id: "#W009", item: "Hard Hat", price: "₦8,000", date: "2025-07-15", status: "In Stock", description: "Durable hard hat for safety", category: "Safety Gear" },
-        { id: "#W010", item: "Cordless Grinder", price: "₦45,000", date: "2025-07-20", status: "In Stock", description: "Cordless angle grinder", category: "Power Tools" },
-        { id: "#W011", item: "Safety Gloves", price: "₦6,000", date: "2025-07-25", status: "Out of Stock", description: "Heavy-duty safety gloves", category: "Safety Gear" },
-        { id: "#W012", item: "Level Tool", price: "₦7,000", date: "2025-07-30", status: "In Stock", description: "Precision leveling tool", category: "Tools" }
-    ];
+  // Set current year in footer
+  document.getElementById('year').textContent = new Date().getFullYear();
 
-    let filteredData = [...wishlistData];
-    let sortColumn = null;
-    let sortDirection = 'asc';
-    let currentPage = 1;
-    const itemsPerPage = 5;
-    const maxPageButtons = 5;
+  // Toggle mobile menu
+  const menuToggle = document.querySelector('.menu-toggle');
+  const navList = document.querySelector('.nav-list');
 
-    // Render wishlist table
-    function renderWishlist(data, page) {
-        const start = (page - 1) * itemsPerPage;
-        const end = start + itemsPerPage;
-        const paginatedData = data.slice(start, end);
+  menuToggle.addEventListener('click', () => {
+    navList.classList.toggle('active');
+    menuToggle.querySelector('i').classList.toggle('fa-bars');
+    menuToggle.querySelector('i').classList.toggle('fa-times');
+  });
 
-        const tbody = document.querySelector(".wishlist-table tbody");
-        tbody.innerHTML = paginatedData.map(item => `
-            <tr>
-                <td>${item.id}</td>
-                <td>${item.item}</td>
-                <td>${item.price}</td>
-                <td>${item.date}</td>
-                <td>${item.status}</td>
-                <td>
-                    <button type="button" class="details-btn" data-id="${item.id}">Details</button>
-                    <button type="button" class="add-to-cart-btn" data-id="${item.id}">Add to Cart</button>
-                    <button type="button" class="remove-btn" data-id="${item.id}">Remove</button>
-                </td>
-            </tr>
-        `).join("");
-        gsap.from(".wishlist-table tr", {
-            opacity: 0,
-            y: 20,
-            duration: 0.5,
-            stagger: 0.1,
-            ease: "power3.out"
-        });
+  // Toggle profile dropdown
+  const userProfile = document.querySelector('.user-profile');
 
-        // Render pagination
-        renderPagination(data.length);
+  userProfile.addEventListener('click', (e) => {
+    e.stopPropagation();
+    userProfile.classList.toggle('active');
+  });
 
-        // Add event listeners for buttons
-        document.querySelectorAll(".details-btn").forEach(btn => {
-            btn.addEventListener("click", () => {
-                const item = wishlistData.find(i => i.id === btn.dataset.id);
-                openItemDetailsModal(item);
-            });
-        });
-        document.querySelectorAll(".add-to-cart-btn").forEach(btn => {
-            btn.addEventListener("click", () => {
-                console.log(`Add to cart: ${btn.dataset.id}`); // Placeholder for cart logic
-            });
-        });
-        document.querySelectorAll(".remove-btn").forEach(btn => {
-            btn.addEventListener("click", () => {
-                console.log(`Remove item: ${btn.dataset.id}`); // Placeholder for removal logic
-            });
-        });
+  // Close dropdown when clicking outside
+  document.addEventListener('click', () => {
+    userProfile.classList.remove('active');
+  });
+
+  // Scroll to top button
+  const scrollTopBtn = document.querySelector('.scroll-top-btn');
+  window.addEventListener('scroll', () => {
+    scrollTopBtn.style.display = window.scrollY > 300 ? 'block' : 'none';
+  });
+
+  scrollTopBtn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // State
+  let wishlist = [];
+  let filteredWishlist = [];
+  let currentPage = 1;
+  const itemsPerPage = 8;
+  let currentUser = null;
+
+  // Format currency
+  const formatCurrency = (amount) => {
+    const value = typeof amount === 'object' && amount.$numberDecimal
+      ? parseFloat(amount.$numberDecimal)
+      : parseFloat(amount);
+
+    return new Intl.NumberFormat('en-NG', {
+      style: 'currency',
+      currency: 'NGN',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value);
+  };
+
+  // Get numeric value from price object
+  const getNumericValue = (value) => {
+    if (value?.$numberDecimal) {
+      return parseFloat(value.$numberDecimal);
     }
+    return parseFloat(value) || 0;
+  };
 
-    // Render pagination with ellipsis
-    function renderPagination(totalItems) {
-        const totalPages = Math.ceil(totalItems / itemsPerPage);
-        const pageNumbers = document.querySelector(".page-numbers");
-        let buttons = [];
+  // Show cart feedback
+  const showCartFeedback = (message) => {
+    const feedback = document.createElement('div');
+    feedback.className = 'cart-feedback';
+    feedback.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+    document.body.appendChild(feedback);
 
-        // Calculate page range
-        let startPage = Math.max(1, currentPage - Math.floor(maxPageButtons / 2));
-        let endPage = Math.min(totalPages, startPage + maxPageButtons - 1);
+    setTimeout(() => {
+      feedback.classList.add('show');
+      setTimeout(() => {
+        feedback.classList.remove('show');
+        setTimeout(() => {
+          document.body.removeChild(feedback);
+        }, 300);
+      }, 2000);
+    }, 10);
+  };
 
-        // Adjust if near the end
-        if (endPage - startPage + 1 < maxPageButtons) {
-            startPage = Math.max(1, endPage - maxPageButtons + 1);
-        }
+  // Update cart count
+  const updateCartCount = () => {
+    const cart = JSON.parse(localStorage.getItem('cart')) || [];
+    const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+    document.querySelector('.cart-count').textContent = totalItems;
+  };
 
-        // Add first page
-        buttons.push(`<button type="button" class="pagination-btn page-number ${currentPage === 1 ? 'active' : ''}" data-page="1">1</button>`);
+  // Fetch current user
+  const fetchCurrentUser = async () => {
+    try {
+      const response = await fetch('/api/user');
+      const data = await response.json();
 
-        // Add ellipsis if needed
-        if (startPage > 2) {
-            buttons.push(`<button type="button" class="pagination-btn ellipsis" disabled>...</button>`);
-        }
-
-        // Add middle pages
-        for (let i = Math.max(2, startPage); i < endPage; i++) {
-            buttons.push(`<button type="button" class="pagination-btn page-number ${currentPage === i ? 'active' : ''}" data-page="${i}">${i}</button>`);
-        }
-
-        // Add last page and ellipsis if needed
-        if (endPage < totalPages) {
-            if (endPage < totalPages - 1) {
-                buttons.push(`<button type="button" class="pagination-btn ellipsis" disabled>...</button>`);
-            }
-            buttons.push(`<button type="button" class="pagination-btn page-number ${currentPage === totalPages ? 'active' : ''}" data-page="${totalPages}">${totalPages}</button>`);
-        }
-
-        pageNumbers.innerHTML = buttons.join("");
-
-        const prevBtn = document.querySelector(".prev-page");
-        const nextBtn = document.querySelector(".next-page");
-        prevBtn.disabled = currentPage === 1;
-        nextBtn.disabled = currentPage === totalPages;
-
-        document.querySelectorAll(".page-number").forEach(btn => {
-            btn.addEventListener("click", () => {
-                currentPage = parseInt(btn.dataset.page);
-                renderWishlist(filteredData, currentPage);
-            });
-        });
-
-        prevBtn.addEventListener("click", () => {
-            if (currentPage > 1) {
-                currentPage--;
-                renderWishlist(filteredData, currentPage);
-            }
-        });
-
-        nextBtn.addEventListener("click", () => {
-            if (currentPage < totalPages) {
-                currentPage++;
-                renderWishlist(filteredData, currentPage);
-            }
-        });
+      if (data.success) {
+        currentUser = data.data;
+      }
+    } catch (error) {
+      console.error('Error fetching user:', error);
     }
+  };
 
-    // Open item details modal
-    function openItemDetailsModal(item) {
-        const modal = document.querySelector(".item-details-modal");
-        const content = document.querySelector(".item-details-body");
-        content.innerHTML = `
-            <dl>
-                <dt>Item ID:</dt><dd>${item.id}</dd>
-                <dt>Item:</dt><dd>${item.item}</dd>
-                <dt>Price:</dt><dd>${item.price}</dd>
-                <dt>Date Added:</dt><dd>${item.date}</dd>
-                <dt>Stock Status:</dt><dd>${item.status}</dd>
-                <dt>Description:</dt><dd>${item.description}</dd>
-                <dt>Category:</dt><dd>${item.category}</dd>
-            </dl>
+  // Fetch wishlist data
+  const fetchWishlist = async () => {
+    const wishlistContainer = document.getElementById('wishlist-container');
+    wishlistContainer.innerHTML = `
+          <div class="loading-spinner">
+            <div class="spinner"></div>
+          </div>
         `;
-        modal.classList.add("active");
-        gsap.fromTo(".order-details-content",
-            { scale: 0.8, opacity: 0 },
-            { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.7)" }
-        );
+
+    try {
+      // Fetch user first
+      await fetchCurrentUser();
+
+      // Then fetch wishlist
+      const response = await fetch('/api/wishlist');
+      const data = await response.json();
+
+      if (data.success) {
+        wishlist = data.result;
+        filteredWishlist = [...wishlist];
+        renderWishlist();
+      } else {
+        throw new Error('Failed to fetch wishlist');
+      }
+    } catch (error) {
+      console.error('Error fetching wishlist:', error);
+      wishlistContainer.innerHTML = `
+            <div class="empty-state">
+              <i class="fas fa-exclamation-circle"></i>
+              <h3>Unable to load wishlist</h3>
+              <p>Please try again later</p>
+              <button class="btn btn-primary" onclick="fetchWishlist()">Retry</button>
+            </div>
+          `;
+    }
+  };
+
+  // Render wishlist
+  const renderWishlist = () => {
+    const wishlistContainer = document.getElementById('wishlist-container');
+
+    if (filteredWishlist.length === 0) {
+      wishlistContainer.innerHTML = `
+            <div class="empty-state">
+              <i class="fas fa-heart"></i>
+              <h3>Your wishlist is empty</h3>
+              <p>Add items to your wishlist to see them here</p>
+              <a href="shop.html" class="btn btn-primary">Start Shopping</a>
+            </div>
+          `;
+      document.querySelector('.pagination').style.display = 'none';
+      return;
     }
 
-    // Sorting function
-    function sortData(column) {
-        if (sortColumn === column) {
-            sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-        } else {
-            sortColumn = column;
-            sortDirection = 'asc';
+    // Apply pagination
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedItems = filteredWishlist.slice(startIndex, endIndex);
+
+    // Generate wishlist HTML
+    wishlistContainer.innerHTML = `
+          <div class="wishlist-grid">
+            ${paginatedItems.map(item => `
+              <div class="wishlist-item" data-id="${item._id}">
+                <img src="${item.images?.mainImage?.url || 'assets/images/product-placeholder.jpg'}" 
+                     alt="${item.name}" class="wishlist-image">
+                <div class="wishlist-details">
+                  <h3 class="wishlist-name">${item.name}</h3>
+                  <div class="wishlist-price">${formatCurrency(item.price)}</div>
+                  <span class="wishlist-stock ${item.stock > 0 ? 'in-stock' : 'out-of-stock'}">
+                    ${item.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                  </span>
+                  <div class="wishlist-actions">
+                    <button class="btn btn-outline view-details" data-id="${item._id}">
+                      <i class="fas fa-eye"></i> Details
+                    </button>
+                    <button class="btn btn-primary add-to-cart" data-id="${item._id}" ${item.stock <= 0 ? 'disabled' : ''}>
+                      <i class="fas fa-cart-plus"></i> Add to Cart
+                    </button>
+                    <button class="btn btn-danger remove-item" data-id="${item._id}">
+                      <i class="fas fa-trash"></i> Remove
+                    </button>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+
+    // Add event listeners
+    document.querySelectorAll('.view-details').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const itemId = btn.getAttribute('data-id');
+        const item = wishlist.find(i => i._id === itemId);
+        if (item) {
+          openItemDetailsModal(item);
         }
+      });
+    });
 
-        document.querySelectorAll(".wishlist-table th").forEach(th => {
-            th.classList.remove("active-sort");
-            const icon = th.querySelector("i");
-            icon.classList.remove("fa-sort-up", "fa-sort-down");
-            icon.classList.add("fa-sort");
-        });
-        const activeTh = document.querySelector(`th[data-sort="${column}"]`);
-        activeTh.classList.add("active-sort");
-        const icon = activeTh.querySelector("i");
-        icon.classList.remove("fa-sort");
-        icon.classList.add(sortDirection === 'asc' ? "fa-sort-up" : "fa-sort-down");
+    document.querySelectorAll('.add-to-cart').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const itemId = btn.getAttribute('data-id');
+        const item = wishlist.find(i => i._id === itemId);
+        if (item) {
+          addToCart(item);
+        }
+      });
+    });
 
-        filteredData.sort((a, b) => {
-            let valA = a[column];
-            let valB = b[column];
+    document.querySelectorAll('.remove-item').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const itemId = btn.getAttribute('data-id');
+        removeFromWishlist(itemId);
+      });
+    });
 
-            if (column === 'price') {
-                valA = parseFloat(valA.replace("₦", "").replace(",", ""));
-                valB = parseFloat(valB.replace("₦", "").replace(",", ""));
-            } else if (column === 'date') {
-                valA = new Date(valA);
-                valB = new Date(valB);
-            }
+    // Render pagination
+    renderPagination();
 
-            if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
-            if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
-            return 0;
-        });
+    // Animate items
+    const items = document.querySelectorAll('.wishlist-item');
+    items.forEach((item, index) => {
+      item.style.opacity = '0';
+      item.style.transform = 'translateY(20px)';
 
-        currentPage = 1;
-        renderWishlist(filteredData, currentPage);
+      setTimeout(() => {
+        item.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+        item.style.opacity = '1';
+        item.style.transform = 'translateY(0)';
+      }, index * 100);
+    });
+  };
+
+  // Render pagination
+  const renderPagination = () => {
+    const totalPages = Math.ceil(filteredWishlist.length / itemsPerPage);
+    const pageNumbers = document.querySelector('.page-numbers');
+
+    if (totalPages <= 1) {
+      document.querySelector('.pagination').style.display = 'none';
+      return;
     }
 
-    // Filtering function
-    function filterData() {
-        const itemFilter = document.querySelector("#filter-item").value.toLowerCase();
-        const statusFilter = document.querySelector("#filter-status").value;
+    document.querySelector('.pagination').style.display = 'flex';
 
-        filteredData = wishlistData.filter(item => {
-            const matchesItem = item.item.toLowerCase().includes(itemFilter);
-            const matchesStatus = statusFilter === "all" || item.status === statusFilter;
-            return matchesItem && matchesStatus;
-        });
-
-        currentPage = 1;
-        renderWishlist(filteredData, currentPage);
+    let paginationHTML = '';
+    for (let i = 1; i <= totalPages; i++) {
+      paginationHTML += `
+            <button class="pagination-btn page-number ${i === currentPage ? 'active' : ''}" data-page="${i}">
+              ${i}
+            </button>
+          `;
     }
 
-    // Initialize table
-    renderWishlist(filteredData, currentPage);
+    pageNumbers.innerHTML = paginationHTML;
 
-    // Sort event listeners
-    document.querySelectorAll(".wishlist-table th[data-sort]").forEach(th => {
-        th.addEventListener("click", () => {
-            sortData(th.dataset.sort);
-        });
+    // Add event listeners to pagination buttons
+    document.querySelectorAll('.page-number').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentPage = parseInt(btn.getAttribute('data-page'));
+        renderWishlist();
+      });
     });
 
-    // Filter event listeners
-    document.querySelector("#filter-item").addEventListener("input", filterData);
-    document.querySelector("#filter-status").addEventListener("change", filterData);
-
-    // Item details modal close
-    document.querySelector(".close-item-details").addEventListener("click", () => {
-        const modal = document.querySelector(".item-details-modal");
-        gsap.to(".order-details-content", {
-            scale: 0.8,
-            opacity: 0,
-            duration: 0.3,
-            ease: "power2.in",
-            onComplete: () => modal.classList.remove("active")
-        });
+    // Previous button
+    document.querySelector('.prev-page').addEventListener('click', () => {
+      if (currentPage > 1) {
+        currentPage--;
+        renderWishlist();
+      }
     });
 
-    // Header Menu Toggle
-    const menuToggle = document.querySelector(".menu-toggle");
-    const navList = document.querySelector(".nav-list");
-    const menuIcon = document.querySelector(".menu-icon");
-    menuToggle.addEventListener("click", () => {
-        navList.classList.toggle("active");
-        menuIcon.classList.toggle("fa-bars");
-        menuIcon.classList.toggle("fa-times");
-        gsap.fromTo(".nav-item",
-            { opacity: 0, y: 20 },
-            { opacity: 1, y: 0, duration: 0.5, stagger: 0.1, ease: "power2.out" }
-        );
+    // Next button
+    document.querySelector('.next-page').addEventListener('click', () => {
+      if (currentPage < totalPages) {
+        currentPage++;
+        renderWishlist();
+      }
     });
 
-    // Theme Toggle
-    const themeToggleBtn = document.querySelector(".theme-toggle-btn");
-    themeToggleBtn.addEventListener("click", () => {
-        document.body.classList.toggle("dark-mode");
-        themeToggleBtn.querySelector("i").classList.toggle("fa-moon");
-        themeToggleBtn.querySelector("i").classList.toggle("fa-sun");
-        gsap.to("body", { backgroundColor: document.body.classList.contains("dark-mode") ? "#1a1a1a" : "#e5e5e5", duration: 0.5 });
+    // Disable buttons when needed
+    document.querySelector('.prev-page').disabled = currentPage === 1;
+    document.querySelector('.next-page').disabled = currentPage === totalPages;
+  };
+
+  // Open item details modal
+  const openItemDetailsModal = (item) => {
+    const modal = document.querySelector('.item-details-modal');
+    const body = document.querySelector('.item-details-body');
+
+    body.innerHTML = `
+          <img src="${item.images?.mainImage?.url || 'assets/images/product-placeholder.jpg'}" 
+               alt="${item.name}" class="item-details-image">
+          <div class="item-info">
+            <div class="info-row">
+              <div class="info-label">Name:</div>
+              <div class="info-value">${item.name}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Price:</div>
+              <div class="info-value">${formatCurrency(item.price)}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Stock:</div>
+              <div class="info-value">
+                <span class="wishlist-stock ${item.stock > 0 ? 'in-stock' : 'out-of-stock'}">
+                  ${item.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="item-description">
+            <h4>Description</h4>
+            <p>${item.description || 'No description available'}</p>
+          </div>
+          ${item.keyFeatures && item.keyFeatures.length > 0 ? `
+          <div class="item-features">
+            <h4>Key Features</h4>
+            <ul>
+              ${item.keyFeatures.map(feature => `<li>${feature}</li>`).join('')}
+            </ul>
+          </div>
+          ` : ''}
+        `;
+
+    modal.classList.add('active');
+  };
+
+  // Close item details modal
+  document.querySelector('.close-item-details').addEventListener('click', () => {
+    const modal = document.querySelector('.item-details-modal');
+    modal.classList.remove('active');
+  });
+
+  // Add to cart
+  const addToCart = (product) => {
+    const cart = JSON.parse(localStorage.getItem('cart')) || [];
+    const existingItem = cart.find(item => item.id === product._id);
+
+    if (existingItem) {
+      existingItem.quantity = (existingItem.quantity || 1) + 1;
+    } else {
+      cart.push({
+        id: product._id,
+        name: product.name,
+        price: getNumericValue(product.price),
+        image: product.images?.mainImage?.url || 'assets/images/default-product.png',
+        quantity: 1
+      });
+    }
+
+    localStorage.setItem('cart', JSON.stringify(cart));
+    updateCartCount();
+    showCartFeedback('Added to cart!');
+  };
+
+  // Remove from wishlist
+  const removeFromWishlist = async (productId) => {
+    try {
+      if (!currentUser) {
+        showCartFeedback('Please log in to manage your wishlist');
+        return;
+      }
+
+      const response = await fetch("/api/delete_from_wishlist", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ userId: currentUser._id, itemId: productId })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Remove from local wishlist
+        wishlist = wishlist.filter(item => item._id !== productId);
+        filteredWishlist = filteredWishlist.filter(item => item._id !== productId);
+
+        // Re-render wishlist
+        renderWishlist();
+
+        showCartFeedback(data.message || 'Item removed from wishlist');
+      } else {
+        showCartFeedback(data.message || 'Failed to remove item');
+      }
+    } catch (error) {
+      console.error('Error removing from wishlist:', error);
+      showCartFeedback('Error removing item from wishlist');
+    }
+  };
+
+  // Filter wishlist
+  const filterWishlist = () => {
+    const searchTerm = document.getElementById('filter-item').value.toLowerCase();
+    const statusFilter = document.getElementById('filter-status').value;
+
+    filteredWishlist = wishlist.filter(item => {
+      // Filter by search term
+      const matchesSearch = searchTerm === '' || item.name.toLowerCase().includes(searchTerm);
+
+      // Filter by status
+      let matchesStatus = true;
+      if (statusFilter === 'in-stock') {
+        matchesStatus = item.stock > 0;
+      } else if (statusFilter === 'out-of-stock') {
+        matchesStatus = item.stock <= 0;
+      }
+
+      return matchesSearch && matchesStatus;
     });
 
-    // Language Selector
-    const languageToggle = document.querySelector(".language-toggle");
-    const languageOptions = document.querySelector(".language-options");
-    languageToggle.addEventListener("click", () => {
-        languageOptions.parentElement.classList.toggle("active");
-        gsap.fromTo(".language-options li",
-            { opacity: 0, y: 10 },
-            { opacity: 1, y: 0, duration: 0.3, stagger: 0.1, ease: "power2.out" }
-        );
-    });
-    languageOptions.querySelectorAll("li").forEach(option => {
-        option.addEventListener("click", () => {
-            const lang = option.dataset.lang;
-            console.log(`Switch to language: ${lang}`); // Placeholder for translation
-            languageOptions.parentElement.classList.remove("active");
-        });
-    });
+    currentPage = 1;
+    renderWishlist();
+  };
 
-    // Profile Dropdown
-    const userProfile = document.querySelector(".user-profile");
-    userProfile.addEventListener("click", () => {
-        userProfile.classList.toggle("active");
-        gsap.fromTo(".profile-dropdown li",
-            { opacity: 0, y: 10 },
-            { opacity: 1, y: 0, duration: 0.3, stagger: 0.1, ease: "power2.out" }
-        );
-    });
+  // Add event listeners to filters
+  document.getElementById('filter-item').addEventListener('input', filterWishlist);
+  document.getElementById('filter-status').addEventListener('change', filterWishlist);
 
-    // Settings Modal
-    const settingsBtn = document.querySelector(".settings-btn");
-    const settingsModal = document.querySelector(".settings-modal");
-    const closeSettings = document.querySelector(".close-settings");
-    const saveSettings = document.querySelector(".save-settings");
-    const deleteAccountBtn = document.querySelector(".delete-account-btn");
-
-    settingsBtn.addEventListener("click", () => {
-        settingsModal.classList.add("active");
-        gsap.fromTo(".settings-content",
-            { scale: 0.8, opacity: 0 },
-            { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.7)" }
-        );
-    });
-
-    closeSettings.addEventListener("click", () => {
-        gsap.to(".settings-content", {
-            scale: 0.8,
-            opacity: 0,
-            duration: 0.3,
-            ease: "power2.in",
-            onComplete: () => settingsModal.classList.remove("active")
-        });
-    });
-
-    saveSettings.addEventListener("click", () => {
-        console.log("Save settings"); // Placeholder for form submission
-        gsap.to(".settings-content", {
-            scale: 0.8,
-            opacity: 0,
-            duration: 0.3,
-            ease: "power2.in",
-            onComplete: () => settingsModal.classList.remove("active")
-        });
-    });
-
-    deleteAccountBtn.addEventListener("click", () => {
-        if (confirm("Are you sure you want to delete your account?")) {
-            console.log("Delete account"); // Placeholder for deletion logic
-        }
-    });
-
-    // Scroll to Top
-    const scrollTopBtn = document.querySelector(".scroll-top-btn");
-    window.addEventListener("scroll", () => {
-        scrollTopBtn.style.display = window.scrollY > 300 ? "block" : "none";
-    });
-    scrollTopBtn.addEventListener("click", () => {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-    });
-
-    // Dynamic Year
-    document.querySelector(".year").textContent = new Date().getFullYear();
-
-    // Close dropdowns and modals when clicking outside
-    document.addEventListener("click", (e) => {
-        if (!languageToggle.contains(e.target) && !languageOptions.contains(e.target)) {
-            languageOptions.parentElement.classList.remove("active");
-        }
-        if (!userProfile.contains(e.target)) {
-            userProfile.classList.remove("active");
-        }
-        if (!document.querySelector(".order-details-content").contains(e.target) && !e.target.classList.contains("details-btn")) {
-            const modal = document.querySelector(".item-details-modal");
-            if (modal.classList.contains("active")) {
-                gsap.to(".order-details-content", {
-                    scale: 0.8,
-                    opacity: 0,
-                    duration: 0.3,
-                    ease: "power2.in",
-                    onComplete: () => modal.classList.remove("active")
-                });
-            }
-        }
-    });
+  // Initialize
+  updateCartCount();
+  fetchWishlist();
 });
+

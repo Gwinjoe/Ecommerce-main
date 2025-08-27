@@ -37,6 +37,20 @@ exports.get_order_by_id = async (req, res) => {
     if (err) console.log(err)
   }
 }
+exports.get_user_orders = async (req, res) => {
+  const id = req.user._id;
+
+  try {
+    const result = await Orders.find({ customer: id }).populate("customer").populate({ path: "products.product", select: "name price" });
+    if (!result) {
+      return res.status(401).json({ success: false, message: "No order matches that id" });
+    }
+
+    res.status(201).json({ success: true, result })
+  } catch (err) {
+    if (err) console.log(err)
+  }
+}
 
 exports.add_order = async (req, res) => {
   const { orderId, items, customer, totalPrice, payment, coupon } = req.body;

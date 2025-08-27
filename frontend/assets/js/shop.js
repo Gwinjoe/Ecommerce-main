@@ -497,7 +497,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 10);
   };
 
-  const addToCart = (productId, quantity = 1) => {
+  const addToCart = async (productId, quantity = 1) => {
     const product = state.products.find(p => p._id === productId);
     if (!product) return;
 
@@ -516,6 +516,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     localStorage.setItem('cart', JSON.stringify(state.cart));
+
+    if (user) {
+      const response = await fetch("/api/add_to_cart", {
+        method: "PATCH",
+        headers: {
+          "Content-type": "application/json",
+        },
+        body: JSON.stringify({ id: user._id, cartItem: productId, quantity: existingItem.quantity })
+      })
+      const { success } = await response.json();
+    }
     updateCartCount();
     showCartFeedback('Added to cart!');
   };
