@@ -79,12 +79,6 @@ const chatContact = document.querySelector(".chat-contact");
 const chatInput = document.querySelector(".chat-input");
 const chatHeader = document.querySelector(".chat-header");
 
-const loader = inlineLoadingIndicator();
-const loaderEl = document.createElement("div");
-loaderEl.classList.add("message", "received");
-loaderEl.innerHTML = loader;
-
-
 
 // Set current year in footer
 yearSpan.textContent = new Date().getFullYear();
@@ -452,34 +446,50 @@ socket.on("updateMessage", (msg) => {
   renderMessages(msg.room)
 })
 
-function autoScrollToBottom(element, speed) {
-  let scrollInterval = setInterval(() => {
-    if (element.scrollTop + element.clientHeight >= element.scrollHeight) {
-      clearInterval(scrollInterval);
-    } else {
-      element.scrollTop += speed;
-    }
-  }, 50);
+function autoScrollToBottom(element, offset = 0) {
+  element.scrollTop = element.scrollHeight - element.clientHeight + offset;
 }
-
 
 let count = 0;
 let activityTimer;
+let loaderEl = null;
+
+// Modified activity handler
 socket.on("activity", ({ id }) => {
-  if (count < 1) {
-    chatMessages.appendChild(loaderEl);
-    autoScrollToBottom(chatMessages, 5);
-    count++
+  // Only show activity indicator for the active chat
+  const activeThread = document.querySelector('.chat-thread.active');
+  if (!activeThread || activeThread.getAttribute('data-id') !== id) {
+    return;
   }
 
-  // Clear after 3 seconds 
-  clearTimeout(activityTimer)
-  activityTimer = setTimeout(() => {
-    chatMessages.removeChild(loaderEl);
-    count = 0;
-  }, 1000)
-})
+  // Create loader if it doesn't exist and count is less than 1
+  if (count < 1 && !loaderEl) {
+    const loader = inlineLoadingIndicator();
+    loaderEl = document.createElement("div");
+    loaderEl.classList.add("message", "received", "loader");
+    loaderEl.innerHTML = loader;
+    chatMessages.appendChild(loaderEl);
+    autoScrollToBottom(chatMessages, 5);
+    count++;
+    console.log("Loader added, count:", count);
+    console.log(loaderEl)
+  }
 
+  // Clear previous timeout and set a new one
+  clearTimeout(activityTimer);
+  activityTimer = setTimeout(() => {
+    if (loaderEl) {
+      chatMessages.removeChild(loaderEl);
+      loaderEl = null;
+      console.log("loader removed from Dom")
+    }
+
+    count = 0;
+    loaderEl = null;
+    console.log(loaderEl)
+    console.log("Loader removed, count:", count);
+  }, 3000);
+});
 
 socket.on("newNotification", ({ supportUnreadMessages, id }) => {
   updateNotifications(id, supportUnreadMessages);

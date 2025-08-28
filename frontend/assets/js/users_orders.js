@@ -188,6 +188,12 @@ document.addEventListener("DOMContentLoaded", () => {
     // Render pagination
     renderPagination();
   };
+  const updateCartCount = () => {
+    const cart = JSON.parse(localStorage.getItem('cart')) || [];
+    const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+    document.querySelector('.cart-count').textContent = totalItems;
+  };
+
 
   // Render pagination
   const renderPagination = () => {

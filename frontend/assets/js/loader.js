@@ -1,4 +1,4 @@
-export function inlineLoadingIndicator(color = '#3498db', size = 30) {
+export function inlineLoadingIndicator(color = 'gray', size = 30) {
   // Calculate sizes based on the base size
   const dotSize = size / 8;
   const spacing = size / 4;
