@@ -484,12 +484,9 @@ socket.on("activity", ({ id }) => {
   clearTimeout(activityTimer);
   activityTimer = setTimeout(() => {
     if (loaderEl) {
-      chatmessages.removeChild(loaderEl);
       loaderEl = null;
-      console.log("loader removed from Dom")
     }
     count = 0;
-    loaderEl = null;
     console.log(loaderEl)
     console.log("Loader removed, count:", count);
   }, 3000);
