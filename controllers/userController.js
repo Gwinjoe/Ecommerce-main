@@ -1,7 +1,7 @@
 const User = require("../models/userModel");
 const { dohash, dohashValidation, hmacProcess } = require("../utils/hashing");
 const { uploader } = require("../middlewares/uploader");
-
+const cloudinary = require("cloudinary").v2;
 
 exports.get_users = async (req, res) => {
   try {
@@ -130,11 +130,21 @@ exports.edit_user_details = async (req, res) => {
     }
     const existingUser = await User.findById(id).select("+password +location");
 
-    const image = req.files.image[0];
+    const image = req.files;
     const imageCloudinary = image && await uploader(image.path);
     if (!existingUser) {
       return res.status(401).json({ success: false, message: "Cannot find user" });
     }
+    const publicIds = [];
+
+    if (image && existingUser.avatar && existingUser.publicId) {
+      publicIds.push(existingUser.publicId);
+    }
+
+    if (publicIds.length > 0) {
+      await cloudinary.api.delete_resources(publicIds);
+    }
+
 
     if (name) {
       existingUser.name = name;

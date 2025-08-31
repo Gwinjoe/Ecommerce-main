@@ -130,9 +130,7 @@ router.get("/users", get_users);
 router.post("/add_user", add_user);
 router.get("/user/:id", get_user_by_id);
 router.put("/edit_user", edit_user);
-router.post("/edit_user_details", upload.single(
-  { name: 'image', maxcount: 1 },
-), edit_user_details);
+router.post("/edit_user_details", upload.single('image'), edit_user_details);
 router.delete("/delete_user/:id", delete_user);
 router.patch("/add_to_cart", addTo_cart);
 router.patch("/add_to_wishlist", addTo_wishlist);

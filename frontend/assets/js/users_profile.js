@@ -123,13 +123,8 @@ document.addEventListener("DOMContentLoaded", () => {
       formData.append("state", state);
       formData.append("country", country);
       formData.append("phone", phone);
-      if (image && image.size > 5 * 1024 * 1024) { // 5MB limit
-        alert("Image size too large - must be less than 5MB");
-        image.value = "";
-        return;
-      } else {
-        formData.append("image", image)
-      }
+      formData.append("image", image)
+
       // Only add password if provided
       const password = document.getElementById('edit-password').value;
       if (password) {
@@ -139,9 +134,6 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         const response = await fetch('/api/edit_user_details', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          },
           body: formData
         });
 
