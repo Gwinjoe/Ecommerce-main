@@ -4,7 +4,7 @@ const router = express.Router();
 const { delete_multiple_products, editMultipleProducts, get_product_by_id, category_count, product_count, edit_product, delete_product, getProducts, add_category, get_categories, edit_category, get_category_by_id, delete_category, add_product } = require("../../controllers/productController")
 const { addTo_cart, get_wishlist, addTo_wishlist, deletefrom_cart, deletefrom_wishlist } = require("../../controllers/userController")
 const { signup, signout, adminSignout } = require("../../controllers/authController")
-const { get_users, get_user_by_id, edit_user, delete_user, user_count, add_user, get_user } = require("../../controllers/userController")
+const { get_users, get_user_by_id, edit_user, edit_user_details, delete_user, user_count, add_user, get_user } = require("../../controllers/userController")
 const path = require("path");
 const passport = require("passport");
 const multer = require('multer');
@@ -130,6 +130,9 @@ router.get("/users", get_users);
 router.post("/add_user", add_user);
 router.get("/user/:id", get_user_by_id);
 router.put("/edit_user", edit_user);
+router.post("/edit_user_details", upload.single(
+  { name: 'image', maxcount: 1 },
+), edit_user_details);
 router.delete("/delete_user/:id", delete_user);
 router.patch("/add_to_cart", addTo_cart);
 router.patch("/add_to_wishlist", addTo_wishlist);

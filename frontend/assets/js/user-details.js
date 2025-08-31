@@ -38,6 +38,40 @@ export const updateHeaderView = async () => {
     console.log(err)
   }
 }
+export const updateHeader = async () => {
+  try {
+    const user = await fetchCurrentUser();
+    if (user) {
+      // Update profile image
+      const profileImages = document.querySelectorAll('.profile-img, .profile-card-img');
+      profileImages.forEach(img => {
+        if (user.avatar) {
+          img.src = user.avatar;
+          img.alt = `${user.name}'s Profile`;
+        }
+      });
+
+      // Update profile name
+      const profileNameElements = document.querySelectorAll('.profile-name');
+      profileNameElements.forEach(el => {
+        el.textContent = user.name;
+      });
+
+      // Update profile status
+      const profileStatusElements = document.querySelectorAll('.profile-status');
+      profileStatusElements.forEach(el => {
+        el.textContent = user.status || (user.active ? 'Active' : 'Inactive');
+        el.style.color = user.active ? '#f28c28' : '#dc3545';
+      });
+
+      console.log('Header updated with user data');
+    } else {
+      console.log('No user data available');
+    }
+  } catch (error) {
+    console.error('Error updating header:', error);
+  }
+};
 
 export async function useapi() {
   const ipdatakey = await getConfig();

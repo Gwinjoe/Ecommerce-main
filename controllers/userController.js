@@ -1,6 +1,6 @@
 const User = require("../models/userModel");
 const { dohash, dohashValidation, hmacProcess } = require("../utils/hashing");
-
+const { uploader } = require("../middlewares/uploader");
 
 
 exports.get_users = async (req, res) => {
@@ -118,6 +118,58 @@ exports.edit_user = async (req, res) => {
     if (err) console.log(err)
   }
 }
+
+exports.edit_user_details = async (req, res) => {
+  const id = req.user._id;
+  const { name, email, address, state, country, city, password } = req.body;
+  try {
+    console.log(req.body);
+    console.log("files - " + req.files)
+    if (id == "688b57cd46225d25fef4cfbc") {
+      return res.status(401).json({ success: false, message: "Can't modify ADMIN" })
+    }
+    const existingUser = await User.findById(id).select("+password +location");
+
+    const image = req.files.image[0];
+    const imageCloudinary = image && await uploader(image.path);
+    if (!existingUser) {
+      return res.status(401).json({ success: false, message: "Cannot find user" });
+    }
+
+    if (name) {
+      existingUser.name = name;
+    }
+    if (imageCloudinary) {
+      existingUser.avatar = imageCloudinary.url;
+      existingUser.publicId = imageCloudinary.publicId;
+    }
+    if (email) {
+      existingUser.email = email;
+    }
+    if (password) {
+      existingUser.password = await dohash(password, 12);
+    }
+    if (address) {
+      existingUser.address.address = address;
+    }
+    if (city) {
+      existingUser.address.city = city;
+    }
+    if (state) {
+      existingUser.address.state = state;
+    }
+    if (country) {
+      existingUser.address.country = country;
+    }
+
+    const results = await existingUser.save();
+    console.log(results);
+    res.status(201).json({ success: true, results })
+  } catch (err) {
+    if (err) console.error(err)
+  }
+}
+
 
 exports.user_count = async (req, res) => {
   const userCount = await User.countDocuments({});

@@ -1,5 +1,6 @@
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { updateHeader } from "./user-details.js"
 
 // Log script loading for debugging
 console.log("logout.js loaded");
@@ -12,7 +13,7 @@ try {
 
 document.addEventListener("DOMContentLoaded", () => {
   console.log("DOMContentLoaded fired");
-
+  updateHeader()
   // Dummy data for notifications
   const notifications = [
     { id: 1, message: "Order #O001 has shipped", date: "2025-07-04" },

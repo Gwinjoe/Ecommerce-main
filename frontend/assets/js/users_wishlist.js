@@ -1,4 +1,7 @@
+import { updateHeader } from "./user-details.js"
 document.addEventListener("DOMContentLoaded", () => {
+
+  updateHeader();
   // Set current year in footer
   document.getElementById('year').textContent = new Date().getFullYear();
 
