@@ -124,13 +124,13 @@ exports.edit_user_details = async (req, res) => {
   const { name, email, address, state, country, city, password } = req.body;
   try {
     console.log(req.body);
-    console.log("files - " + req.files)
+    console.log("files - " + req.file)
     if (id == "688b57cd46225d25fef4cfbc") {
       return res.status(401).json({ success: false, message: "Can't modify ADMIN" })
     }
     const existingUser = await User.findById(id).select("+password +location");
 
-    const image = req.files;
+    const image = req.file;
     const imageCloudinary = image && await uploader(image.path);
     if (!existingUser) {
       return res.status(401).json({ success: false, message: "Cannot find user" });
