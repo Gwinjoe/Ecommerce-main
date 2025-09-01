@@ -84,6 +84,20 @@ const userSchema = mongoose.Schema({
   notifications: [{
     type: String,
   }],
+  recentActivities: [{
+    activity: {
+      type: String,
+    },
+    time: {
+      type: String,
+      default: new Intl.DateTimeFormat('default', {
+        hour: 'numeric',
+        minute: 'numeric',
+        second: 'numeric'
+      }).format(new Date()),
+
+    }
+  }],
   assignedAdmin: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
