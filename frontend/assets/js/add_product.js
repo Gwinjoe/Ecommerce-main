@@ -123,7 +123,8 @@ function handleImageUploads() {
     return;
   }
 
-  let allFiles = []; // Store all selected files
+  // store entries as { file, url } so we can revoke urls when removed
+  let allFiles = [];
 
   imageInput.addEventListener("change", () => {
     const newFiles = Array.from(imageInput.files);
@@ -131,14 +132,14 @@ function handleImageUploads() {
 
     // Validate new files
     for (const file of newFiles) {
-      if (!file.type.match("image/(png|jpeg)")) {
+      if (!file.type.match(/^image\/(png|jpeg)$/)) {
         error.textContent = "Only PNG and JPEG images are allowed";
         error.classList.add("active");
         gsap.from(error, { opacity: 0, y: 5, duration: 0.3, ease: "power3.out" });
         imageInput.value = "";
         return;
       }
-      if (file.size > 5 * 1024 * 1024) { // 2MB limit
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
         error.textContent = "Image size must be less than 5MB";
         error.classList.add("active");
         gsap.from(error, { opacity: 0, y: 5, duration: 0.3, ease: "power3.out" });
@@ -156,81 +157,92 @@ function handleImageUploads() {
       return;
     }
 
-    // Append new files to allFiles
-    allFiles = [...allFiles, ...newFiles];
+    // Append new files to allFiles with object URLs
+    for (const f of newFiles) {
+      allFiles.push({ file: f, url: URL.createObjectURL(f) });
+    }
+
     error.textContent = "";
     error.classList.remove("active");
 
     // Update preview
-    imagePreview.innerHTML = "";
-    allFiles.forEach((file, index) => {
-      const previewItem = document.createElement("div");
-      previewItem.classList.add("preview-item");
-      const img = document.createElement("img");
-      img.src = URL.createObjectURL(file);
-      const removeBtn = document.createElement("button");
-      removeBtn.textContent = "Remove";
-      removeBtn.addEventListener("click", () => {
-        allFiles = allFiles.filter(f => f !== file);
-        previewItem.remove();
-        // Update input files
-        const dataTransfer = new DataTransfer();
-        allFiles.forEach(f => dataTransfer.items.add(f));
-        imageInput.files = dataTransfer.files;
-        // Refresh preview to maintain main image
-        imagePreview.innerHTML = "";
-        allFiles.forEach((f, i) => {
-          const newPreviewItem = document.createElement("div");
-          newPreviewItem.classList.add("preview-item");
-          if (i === 0) newPreviewItem.classList.add("main-image");
-          const newImg = document.createElement("img");
-          newImg.src = URL.createObjectURL(f);
-          const newRemoveBtn = document.createElement("button");
-          newRemoveBtn.textContent = "Remove";
-          newRemoveBtn.addEventListener("click", () => {
-            allFiles = allFiles.filter(f2 => f2 !== f);
-            newPreviewItem.remove();
-            const newDataTransfer = new DataTransfer();
-            allFiles.forEach(f2 => newDataTransfer.items.add(f2));
-            imageInput.files = newDataTransfer.files;
-            trackEvent("remove_image");
-          });
-          const newSetMainBtn = document.createElement("button");
-          newSetMainBtn.textContent = "Set as Main";
-          newSetMainBtn.classList.add("set-main");
-          newSetMainBtn.addEventListener("click", () => {
-            document.querySelectorAll(".preview-item").forEach(item => item.classList.remove("main-image"));
-            newPreviewItem.classList.add("main-image");
-            trackEvent("set_main_image");
-          });
-          newPreviewItem.appendChild(newImg);
-          newPreviewItem.appendChild(newRemoveBtn);
-          newPreviewItem.appendChild(newSetMainBtn);
-          imagePreview.appendChild(newPreviewItem);
-        });
-        trackEvent("remove_image");
-      });
-      const setMainBtn = document.createElement("button");
-      setMainBtn.textContent = "Set as Main";
-      setMainBtn.classList.add("set-main");
-      setMainBtn.addEventListener("click", () => {
-        document.querySelectorAll(".preview-item").forEach(item => item.classList.remove("main-image"));
-        previewItem.classList.add("main-image");
-        trackEvent("set_main_image");
-      });
-      previewItem.appendChild(img);
-      imagePreview.appendChild(previewItem);
-      gsap.from(previewItem, { opacity: 0, scale: 0.8, duration: 0.3, ease: "power3.out", delay: index * 0.1 });
-    });
+    renderPreviews();
 
     // Update input files to reflect allFiles
     const dataTransfer = new DataTransfer();
-    allFiles.forEach(f => dataTransfer.items.add(f));
-    //    imageInput.files = dataTransfer.files;
+    allFiles.forEach(e => dataTransfer.items.add(e.file));
+    imageInput.files = dataTransfer.files;
 
-    trackEvent("image_input", { file_count: allFiles.length });
+    if (typeof trackEvent === "function") trackEvent("image_input", { file_count: allFiles.length });
   });
+
+  function renderPreviews() {
+    imagePreview.innerHTML = "";
+
+    allFiles.forEach((entry, index) => {
+      const { file, url } = entry;
+
+      const previewItem = document.createElement("div");
+      previewItem.classList.add("preview-item");
+
+      // image
+      const img = document.createElement("img");
+      img.src = url;
+      img.alt = file.name || `Image ${index + 1}`;
+
+      // remove button (styled inline so you don't need extra CSS)
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.textContent = "✕";
+      removeBtn.classList.add("remove-btn");
+      // minimal inline styles (overrideable by your CSS)
+      removeBtn.style.position = "absolute";
+      removeBtn.style.top = "8px";
+      removeBtn.style.right = "8px";
+      removeBtn.style.width = "28px";
+      removeBtn.style.height = "28px";
+      removeBtn.style.borderRadius = "50%";
+      removeBtn.style.border = "0";
+      removeBtn.style.cursor = "pointer";
+      removeBtn.style.display = "grid";
+      removeBtn.style.placeItems = "center";
+      removeBtn.style.background = "rgba(255,255,255,0.06)";
+      removeBtn.style.color = "#fff";
+      removeBtn.style.fontWeight = "700";
+      removeBtn.setAttribute("aria-label", `Remove ${file.name || "image"}`);
+
+      // remove handler
+      removeBtn.addEventListener("click", () => {
+        // revoke URL
+        try { URL.revokeObjectURL(url); } catch (e) { }
+        // remove entry
+        allFiles.splice(index, 1);
+        // re-render previews
+        renderPreviews();
+        // update input.files
+        const dt = new DataTransfer();
+        allFiles.forEach(e => dt.items.add(e.file));
+        imageInput.files = dt.files;
+        if (typeof trackEvent === "function") trackEvent("remove_image");
+      });
+
+      // assemble
+      previewItem.appendChild(img);
+      previewItem.appendChild(removeBtn);
+      imagePreview.appendChild(previewItem);
+
+      // animate (you already use gsap; retain same easing)
+      gsap.from(previewItem, {
+        opacity: 0,
+        scale: 0.8,
+        duration: 0.3,
+        ease: "power3.out",
+        delay: index * 0.1
+      });
+    });
+  }
 }
+
 
 // Handle dynamic list fields (key features, what's in the box)
 function handleDynamicLists() {
