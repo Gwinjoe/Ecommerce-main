@@ -2,6 +2,7 @@ const Orders = require("../models/orderSchema");
 const User = require("../models/userModel")
 const Products = require("../models/productSchema")
 const { dohash, dohashValidation, hmacProcess } = require("../utils/hashing");
+const { sendMail } = require("../middlewares/sendmail")
 
 exports.revenue = async (req, res) => {
   try {
@@ -127,6 +128,20 @@ exports.add_order = async (req, res) => {
       })
 
       const result = await newUser.save();
+      await sendMail({
+        to: `${email}`,
+        subject: 'Welcome to SWISStools',
+        template: 'welcome',
+        data: { name: `${name}`, verification_link: `https://swisstools.store/verify/${result._id}` }
+      })
+      // 3. Guest welcome (password)
+      await sendMail({
+        to: `${email}`,
+        subject: 'Account created for you',
+        template: 'guest-welcome',
+        data: { name: `${name}`, password: `${password}`, login_link: 'https://swisstools.store/login' }
+      });
+
       console.log(result)
       userId = result._id;
 
@@ -148,6 +163,20 @@ exports.add_order = async (req, res) => {
     })
 
     const result = await newOrder.save();
+    await sendMail({
+      to: 'gwintrade820@gmail.com',
+      subject: 'Your order is received',
+      template: 'order-confirmation',
+      data: {
+        name: 'Joseph',
+        order_id: 'ST-12345',
+        order_total: '$89.99',
+        order_items: '<ul><li>Hand tool set x1</li><li>Electric drill x1</li></ul>',
+        order_link: 'https://swisstools.store/orders/ST-12345'
+      }
+    });
+
+
     console.log(result)
     res.status(201).json({ success: true, message: "Your order has been created successfuly", result });
   } catch (error) {

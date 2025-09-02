@@ -2,7 +2,7 @@ const { signupSchema, signinSchema, emailSchema, verificationCodeSchema, changeP
 const User = require("../models/userModel");
 const passport = require("passport");
 const { dohash, dohashValidation, hmacProcess } = require("../utils/hashing");
-const transport = require("../middlewares/sendmail")
+const { sendMail } = require("../middlewares/sendmail")
 
 exports.signup = async (req, res) => {
   const { name, email, password } = req.body;
@@ -23,6 +23,12 @@ exports.signup = async (req, res) => {
     })
 
     const result = await newUser.save();
+    await sendMail({
+      to: `${email}`,
+      subject: 'Welcome to SWISStools',
+      template: 'welcome',
+      data: { name: `${name}`, verification_link: `https://swisstools.store/verify/${result._id}` }
+    })
     res.status(201).json({ success: true, message: "Your Account has been created successfuly", result });
   } catch (error) {
     console.log(error)
