@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
   // Initialize Socket.IO connection
-  const socket = io('/admin_dashboard');
+  const socket = io();
   const connectionStatus = document.createElement('div');
   connectionStatus.className = 'connection-status disconnected';
   connectionStatus.innerHTML = '<i class="fas fa-circle"></i><span>Disconnected</span>';
@@ -478,7 +478,7 @@ document.addEventListener('DOMContentLoaded', function() {
   function updateChatNotification(data) {
     const chatNotification = document.querySelector('.sidebar-item:nth-child(8) .unread-count');
     if (chatNotification) {
-      chatNotification.textContent = data.count;
+      chatNotification.textContent = data;
     }
   }
 

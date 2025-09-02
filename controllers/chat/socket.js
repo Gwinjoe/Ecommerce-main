@@ -27,6 +27,22 @@ module.exports = function(server, sessionMiddleware) {
     const isAdmin = user.admin;
     let chats = []
 
+    const unreadMessages = async () => {
+      const allchats = await Chats.find({ admin: id })
+      console.log(allchats)
+      if (!allchats) {
+        return 0
+      }
+      let messagecount = 0
+      allchats.forEach((chat) => {
+        messagecount += chat.supportUnreadMessages;
+      })
+      return messagecount || 0;
+    }
+
+    const data = await unreadMessages();
+    io.emit("chat_notification", data)
+    console.log("data = " + data)
     console.log(user.name + " connected")
 
     socket.on("getChatThreads", async () => {
@@ -130,9 +146,11 @@ module.exports = function(server, sessionMiddleware) {
         console.log("no chat matches that id");
         return;
       }
+      const unreadMessages = await unreadMessages()
       io.to(existingChat.id).emit("newNotification", { userUnreadMessages: existingChat.userUnreadMessages, supportUnreadMessages: existingChat.supportUnreadMessages, id: existingChat.id })
+      io.emit("chat_notification", unreadMessages)
+      console.log(unreadMessages)
     })
-
     socket.on('disconnect', () => {
       console.log(`${user.name} disconnected`);
     });
