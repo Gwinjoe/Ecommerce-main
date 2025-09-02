@@ -2,12 +2,10 @@ import { gsap } from "gsap";
 import { updateHeaderView } from "./user-details.js"
 
 document.addEventListener("DOMContentLoaded", () => {
-  // Get product ID from URL
   const urlParams = new URLSearchParams(window.location.search);
   const productId = urlParams.get('id');
 
   updateHeaderView()
-  // Elements
   const spinner = document.getElementById('spinner');
   const productTitle = document.getElementById('productTitle');
   const productCategory = document.getElementById('productCategory');
@@ -18,13 +16,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const productBadges = document.getElementById('productBadges');
   const addToCartBtn = document.getElementById('addToCartBtn');
   const cartCount = document.querySelector('.cart-count');
+  const stock = document.querySelector('#stock');
+  const stockError = document.querySelector('#stockError');
+  const stockContainer = document.querySelector('#stockContainer');
   const relatedProducts = document.getElementById('relatedProducts');
 
-  // State
   let cart = JSON.parse(localStorage.getItem('cart')) || [];
   let currentProduct = null;
 
-  // Format currency
   const formatCurrency = (amount) => {
     const value = amount?.$numberDecimal ? parseFloat(amount.$numberDecimal) : parseFloat(amount);
     return `₦${value.toLocaleString('en-NG', {
@@ -33,17 +32,14 @@ document.addEventListener("DOMContentLoaded", () => {
     })}`;
   };
 
-  // Show loading spinner
   const showSpinner = () => {
     spinner.style.display = 'block';
   };
 
-  // Hide loading spinner
   const hideSpinner = () => {
     spinner.style.display = 'none';
   };
 
-  // Show cart feedback
   const showCartFeedback = (message) => {
     const feedback = document.createElement('div');
     feedback.className = 'cart-feedback';
@@ -61,13 +57,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 10);
   };
 
-  // Update cart count
   const updateCartCount = () => {
     const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
     cartCount.textContent = totalItems;
   };
 
-  // Fetch product data
   const fetchProductData = async () => {
     if (!productId) {
       alert('Product ID not found in URL');
@@ -95,12 +89,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  // Populate product data
   const populateProductData = (product) => {
-    // Set basic info
     productTitle.textContent = product.name;
     productCategory.textContent = `Category: ${product.category?.name || 'Uncategorized'}`;
     productPrice.textContent = formatCurrency(product.price);
+    if (product.stock) {
+      stock.value = product.stock;
+    } else {
+      stockContainer.style.display = "none";
+      stockError.style.display = "block";
+    }
     productDescription.textContent = product.description || 'No description available';
     let featuresHtml = "";
     product.keyFeatures.forEach(feature => {
@@ -141,8 +139,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Add additional images as thumbnails
-    if (product.images?.additionalImages) {
-      product.images.additionalImages.forEach(img => {
+    if (product.images?.thumbnails) {
+      product.images.thumbnails.forEach(img => {
         const thumb = document.createElement('img');
         thumb.src = img.url;
         thumb.alt = 'Product thumbnail';

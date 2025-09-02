@@ -374,6 +374,13 @@
           <label for="quantity">Quantity:</label>
           <input type="number" id="quantity" value="1" min="1">
         </div>
+        <div class="quantity-selector" id="stockContainer" style=" margin-top: -15px;">
+          <label for="quantity">Stock:</label>
+          <input disabled type="number" id="stock" value="1" min="1">
+        </div>
+        <div id="stockError"
+          style="  margin-bottom: 15px; margin-top: -15px; display: none; color: red; font-size: 0.5rem;">Out of stock!
+        </div>
         <button class="btn btn-primary add-to-cart" id="addToCartBtn" type="button"><i class="fas fa-cart-plus"></i>
           Add
           to Cart</button>

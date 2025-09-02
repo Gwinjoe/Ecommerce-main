@@ -1,18 +1,15 @@
 document.addEventListener('DOMContentLoaded', function() {
-  // Initialize Socket.IO connection
   const socket = io();
   const connectionStatus = document.createElement('div');
   connectionStatus.className = 'connection-status disconnected';
   connectionStatus.innerHTML = '<i class="fas fa-circle"></i><span>Disconnected</span>';
   document.body.appendChild(connectionStatus);
 
-  // Update connection status
   socket.on('connect', () => {
     connectionStatus.className = 'connection-status connected';
     connectionStatus.innerHTML = '<i class="fas fa-circle"></i><span>Connected</span>';
     console.log('Connected to server');
 
-    // Request initial data
     socket.emit('request_data');
   });
 
@@ -22,35 +19,28 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Disconnected from server');
   });
 
-  // Handle metrics update from server
   socket.on('update_metrics', (data) => {
     updateMetrics(data);
   });
 
-  // Handle orders update from server
   socket.on('update_orders', (data) => {
     updateOrdersTable(data);
   });
 
-  // Handle notifications from server
   socket.on('new_notification', (data) => {
     addNotification(data);
   });
 
-  // Handle chat notifications from server
   socket.on('chat_notification', (data) => {
     updateChatNotification(data);
   });
 
-  // Set current year in footer
   document.querySelector('.year').textContent = new Date().getFullYear();
 
-  // Toggle sidebar on mobile
   document.querySelector('.menu-toggle').addEventListener('click', function() {
     document.querySelector('.sidebar').classList.toggle('active');
   });
 
-  // Toggle theme
   document.querySelector('.theme-toggle-btn').addEventListener('click', function() {
     document.body.classList.toggle('dark-mode');
     const icon = this.querySelector('i');
@@ -65,7 +55,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // Check for saved theme preference
   const savedTheme = localStorage.getItem('theme');
   if (savedTheme === 'dark') {
     document.body.classList.add('dark-mode');
@@ -73,17 +62,14 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelector('.theme-toggle-btn i').classList.add('fa-sun');
   }
 
-  // Toggle language selector
   document.querySelector('.language-toggle').addEventListener('click', function() {
     document.querySelector('.language-selector').classList.toggle('active');
   });
 
-  // Language selection
   document.querySelectorAll('.language-options li').forEach(option => {
     option.addEventListener('click', function() {
       const lang = this.getAttribute('data-lang');
       document.querySelector('.language-selector').classList.remove('active');
-      // Here you would typically set the language
       console.log('Language changed to:', lang);
     });
   });
@@ -179,9 +165,7 @@ document.addEventListener('DOMContentLoaded', function() {
   fetchMetricsData();
   fetchOrdersData();
 
-  // Function to fetch metrics data from APIs
   function fetchMetricsData() {
-    // Array of API endpoints
     const endpoints = [
       '/api/revenue',
       '/api/usercount',
@@ -207,7 +191,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // Function to update metric display based on API response
   function updateMetricDisplay(endpoint, data) {
     let metricElement;
 
@@ -239,7 +222,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // Function to fetch orders data
   function fetchOrdersData() {
     fetch('/api/orders')
       .then(response => response.json())
@@ -255,9 +237,7 @@ document.addEventListener('DOMContentLoaded', function() {
       });
   }
 
-  // Function to process orders data for charts and tables
   function processOrdersData(orders) {
-    // You can process the orders data here for additional functionality
     console.log('Orders data processed:', orders.length, 'orders');
   }
 

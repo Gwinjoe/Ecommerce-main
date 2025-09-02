@@ -57,13 +57,11 @@
         <div class="cart">
           <a href="cart.html"><i class="fas fa-shopping-cart"></i>
             <span class="cart-text">Cart</span>
-            <span class="cart-count">0</span>
-          </a>
+            <span class="cart-count">0</span></a>
         </div>
       </div>
     </div>
   </header>
-
   <!-- Main Content -->
   <main class="container product-container animate-fade">
     <div class="product-details">
@@ -85,10 +83,14 @@
           <label for="quantity">Quantity:</label>
           <input type="number" id="quantity" value="1" min="1">
         </div>
-        <button class="btn btn-primary add-to-cart" type="button"><i class="fas fa-cart-plus"></i> Add to Cart</button>
+        <div class="quantity-selector">
+          <label for="quantity">Stock:</label>
+          <input disabled type="number" id="stock" value="1" min="1">
+        </div>
+        <button class="btn btn-primary add-to-cart" type="button"><i class="fas fa-cart-plus"></i>
+          Add to Cart</button>
       </div>
     </div>
-
     <!-- Tabs Section -->
     <div class="product-tabs">
       <ul class="tab-nav">
@@ -107,9 +109,12 @@
             <h4>Key Features</h4>
             <div class="features-container">
               <ul>
-                <li><i class="fas fa-check-circle"></i> High-precision engineering</li>
-                <li><i class="fas fa-check-circle"></i> Durable steel construction</li>
-                <li><i class="fas fa-check-circle"></i> Ergonomic design</li>
+                <li><i class="fas fa-check-circle"></i>
+                  High-precision engineering</li>
+                <li><i class="fas fa-check-circle"></i>
+                  Durable steel construction</li>
+                <li><i class="fas fa-check-circle"></i>
+                  Ergonomic design</li>
               </ul>
             </div>
           </div>
@@ -146,7 +151,6 @@
         </div>
       </div>
     </div>
-
     <!-- Related Products Section -->
     <section class="related-products">
       <h2>Related Products</h2>
@@ -155,24 +159,26 @@
           <img src="assets/images/product-placeholder.jpg" alt="Related Product 1" class="product-card-img">
           <h4>Related Tool 1</h4>
           <p>$49.99</p>
-          <a href="product.html" class="btn btn-primary"><i class="fas fa-eye"></i> View</a>
+          <a href="product.html" class="btn btn-primary"><i class="fas fa-eye"></i>
+            View</a>
         </div>
         <div class="product-card">
           <img src="assets/images/product-placeholder.jpg" alt="Related Product 2" class="product-card-img">
           <h4>Related Tool 2</h4>
           <p>$59.99</p>
-          <a href="product.html" class="btn btn-primary"><i class="fas fa-eye"></i> View</a>
+          <a href="product.html" class="btn btn-primary"><i class="fas fa-eye"></i>
+            View</a>
         </div>
         <div class="product-card">
           <img src="assets/images/product-placeholder.jpg" alt="Related Product 3" class="product-card-img">
           <h4>Related Tool 3</h4>
           <p>$69.99</p>
-          <a href="product.html" class="btn btn-primary"><i class="fas fa-eye"></i> View</a>
+          <a href="product.html" class="btn btn-primary"><i class="fas fa-eye"></i>
+            View</a>
         </div>
       </div>
     </section>
   </main>
-
   <!-- Footer -->
   <footer class="site-footer">
     <div class="footer-container">
@@ -180,10 +186,13 @@
         <h3 class="footer-logo">LO<span class="highlight">GO</span></h3>
         <p>Your trusted partner in engineering &amp; construction tools.</p>
         <div class="footer-contact">
-          <p><i class="fas fa-map-marker-alt"></i> No 5, Chief Tom Agbuji Street (Cherubim Road) Mile 3, Port Harcourt,
+          <p><i class="fas fa-map-marker-alt"></i>
+            No 5, Chief Tom Agbuji Street (Cherubim Road) Mile 3, Port Harcourt,
             Nigeria.</p>
-          <p><i class="fas fa-phone-alt"></i> +234 913 232 8654</p>
-          <p><i class="fas fa-envelope"></i> support@swisstools.store</p>
+          <p><i class="fas fa-phone-alt"></i>
+            +234 913 232 8654</p>
+          <p><i class="fas fa-envelope"></i>
+            support@swisstools.store</p>
         </div>
       </div>
       <div class="footer-column animate-fade">
@@ -224,19 +233,21 @@
       </div>
     </div>
     <div class="footer-bottom">
-      <p>© <span id="year"></span> LOGO. All rights reserved.</p>
+      <p>©
+        <span id="year"></span>
+        LOGO. All rights reserved.
+      </p>
     </div>
     <button id="scrollTopBtn" title="Go to top" type="button">
       <span class="visually-hidden">Scroll to top</span>
       <i class="fas fa-arrow-up"></i>
     </button>
   </footer>
-
   <!-- Swiper JS -->
   <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
   <!-- Importmap for GSAP -->
   <script type="importmap">
-        {"imports":{"gsap":"https://cdn.skypack.dev/gsap","gsap/ScrollTrigger":"https://cdn.skypack.dev/gsap/ScrollTrigger"}}
+      {"imports":{"gsap":"https://cdn.skypack.dev/gsap","gsap/ScrollTrigger":"https://cdn.skypack.dev/gsap/ScrollTrigger"}}
     </script>
   <!-- JavaScript -->
   <script type="module" src="assets/js/main.js"></script>
