@@ -15,6 +15,7 @@ const rootRoutes = require("./routes/root")
 const cors = require("cors");
 const { clearUploads } = require("./utils/clearuploads")
 
+
 const MongoStore = require("connect-mongo");
 
 const sessionStore = MongoStore.create({ mongoUrl: DATABASE_URI, collectionName: "sessions" });
@@ -53,6 +54,7 @@ app.use("/admin", adminRoutes);
 app.use("/", rootRoutes);
 app.use("/api", require("./routes/api/routes"))
 
+require("./middlewares/example-send");
 app.all("/{*splat}", (req, res) => {
   if (req.accepts("html")) {
     res.status(404).sendFile(path.join(__dirname, "frontend", "404.html"));

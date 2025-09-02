@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <title>Your New Account Credentials</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root {
+      --primary: #f28c28;
+      --bg: #f2f2f2;
+      --card: #fff;
+      --text: #333;
+      --hfont: 'Montserrat', sans-serif;
+      --bfont: 'Open Sans', sans-serif
+    }
+
+    body {
+      margin: 0;
+      font-family: var(--bfont);
+      background: var(--bg);
+      color: var(--text)
+    }
+
+    .wrap {
+      max-width: 600px;
+      margin: 28px auto
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 6px 22px rgba(0, 0, 0, .06)
+    }
+
+    .header {
+      background: var(--primary);
+      padding: 18px;
+      text-align: center;
+      color: #fff;
+      font-family: var(--hfont);
+      font-weight: 700
+    }
+
+    .content {
+      padding: 18px
+    }
+
+    .pwd {
+      background: #faf7f0;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px dashed #e6d3b6;
+      margin: 14px 0;
+      font-weight: 700;
+      text-align: center
+    }
+
+    .btn {
+      display: inline-block;
+      margin-top: 12px;
+      background: var(--primary);
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 700
+    }
+
+    .footer {
+      padding: 14px;
+      text-align: center;
+      background: #fafafa;
+      color: #777;
+      font-size: 13px
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="header">Welcome — Account Created</div>
+      <div class="content">
+        <p>Hi {{name}},</p>
+
+        <p>We created an account for you to help you track orders faster.</p>
+
+        <div class="pwd">
+          Your temporary password: <span style="display:block;margin-top:6px;font-size:16px">{{password}}</span>
+        </div>
+
+        <p><a href="{{login_link}}" class="btn">Login & Change Password</a></p>
+
+        <p style="color:#666;font-size:13px;margin-top:12px">For security, please change this password after your first
+          login.</p>
+      </div>
+
+      <div class="footer">© {{year}} {{store_name}}</div>
+    </div>
+  </div>
+</body>
+
+</html>

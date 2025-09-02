@@ -144,9 +144,9 @@ module.exports = function(server, sessionMiddleware) {
         console.log("no chat matches that id");
         return;
       }
-      const unreadMessages = await unreadMessages()
+      const unreadMessagesCount = await unreadMessages()
       io.to(existingChat.id).emit("newNotification", { userUnreadMessages: existingChat.userUnreadMessages, supportUnreadMessages: existingChat.supportUnreadMessages, id: existingChat.id })
-      io.emit("chat_notification", unreadMessages)
+      io.emit("chat_notification", unreadMessagesCount)
     })
     socket.on('disconnect', () => {
       console.log(`${user.name} disconnected`);

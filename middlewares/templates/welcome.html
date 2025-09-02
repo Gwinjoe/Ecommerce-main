@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <title>Welcome to SWISStools</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root {
+      --primary-color: #f28c28;
+      --bg: #f2f2f2;
+      --card-bg: #ffffff;
+      --text: #333;
+      --headline-font: 'Montserrat', sans-serif;
+      --body-font: 'Open Sans', sans-serif;
+    }
+
+    body {
+      margin: 0;
+      font-family: var(--body-font);
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased
+    }
+
+    .wrap {
+      max-width: 600px;
+      margin: 28px auto;
+      padding: 0
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 6px 22px rgba(0, 0, 0, 0.08)
+    }
+
+    .header {
+      background: linear-gradient(90deg, var(--primary-color), #d47518);
+      padding: 22px 18px;
+      text-align: center;
+      color: #fff;
+      font-family: var(--headline-font);
+      font-size: 20px
+    }
+
+    .brand {
+      font-weight: 700;
+    }
+
+    .brand .swiss {
+      color: #fff;
+      background: transparent;
+      font-weight: 900
+    }
+
+    .content {
+      padding: 20px 22px;
+      color: var(--text);
+      line-height: 1.55;
+    }
+
+    .button {
+      display: inline-block;
+      margin-top: 14px;
+      background: var(--primary-color);
+      color: #fff;
+      padding: 12px 18px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 700
+    }
+
+    .footer {
+      padding: 14px 18px;
+      font-size: 12px;
+      color: #777;
+      text-align: center;
+      background: #fafafa
+    }
+
+    .muted {
+      color: #666;
+      font-size: 14px
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="header">
+        <span class="brand"><span class="swiss">SWISS</span>tools</span>
+      </div>
+
+      <div class="content">
+        <p>Hi {{name}},</p>
+
+        <p>Welcome to <strong>SWISStools</strong> — we’re excited you joined us.</p>
+
+        <p class="muted">Get started by verifying your email and exploring top products tailored for you.</p>
+
+        <a href="{{verification_link}}" class="button">Verify your email</a>
+
+        <p style="margin-top:18px;font-size:13px;color:#666">If you did not sign up, ignore this message.</p>
+      </div>
+
+      <div class="footer">
+        © {{year}} {{store_name}} — All rights reserved.
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>
