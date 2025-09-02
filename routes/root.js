@@ -2,7 +2,8 @@ const express = require("express");
 const router = express.Router();
 const path = require("path");
 const { isLoggedIn, isAuth } = require("../middlewares/identifier")
-const { makeActive } = require("../controllers/authController")
+const { makeActive, verifyUser } = require("../controllers/authController")
+
 
 // root routes
 
@@ -78,7 +79,7 @@ router.get("/wishlist", isLoggedIn, (req, res) => {
   res.sendFile(path.join(__dirname, "..", "frontend", "users", "wishlist.html"))
 });
 
-
+router.get("/verify/:id", verifyUser);
 
 
 

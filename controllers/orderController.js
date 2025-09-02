@@ -163,16 +163,21 @@ exports.add_order = async (req, res) => {
     })
 
     const result = await newOrder.save();
+    const html = "";
+    items.forEach((item) => {
+      const h = `<li>${item.name} x${item.quantity}</li>`
+      html += h
+    })
     await sendMail({
-      to: 'gwintrade820@gmail.com',
+      to: `${email}`,
       subject: 'Your order is received',
       template: 'order-confirmation',
       data: {
-        name: 'Joseph',
-        order_id: 'ST-12345',
-        order_total: '$89.99',
-        order_items: '<ul><li>Hand tool set x1</li><li>Electric drill x1</li></ul>',
-        order_link: 'https://swisstools.store/orders/ST-12345'
+        name: `${name}`,
+        order_id: `${result.payment.reference}`,
+        order_total: `${result.totalPrice}`,
+        order_items: `<ul>${html}</ul>`,
+        order_link: 'https://swisstools.store/orders/'
       }
     });
 

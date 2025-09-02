@@ -98,7 +98,6 @@ router.post("/admin_signin",
   }
 );
 
-
 router.post("/signup", signup);
 router.get("/logout", signout);
 router.get("/signout", adminSignout);
