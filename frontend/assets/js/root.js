@@ -1,4 +1,4 @@
-import { updateHeaderView, useapi } from "./user-details.js"
+import { updateHeaderView } from "./user-details.js"
 
 async function fetchData(endpoint) {
   try {
@@ -493,8 +493,8 @@ function animateProductCards() {
 document.addEventListener('DOMContentLoaded', async () => {
 
   updateHeaderView();
-  const { ipapi } = await useapi();
-  currency = ipapi.currency
+  // const { ipapi } = await useapi();
+  // currency = ipapi.currency
   // Initialize app
   initApp();
 

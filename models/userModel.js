@@ -76,7 +76,7 @@ const userSchema = mongoose.Schema({
   },
   avatar: {
     type: String,
-    default: "https://res.cloudinary.com/dlmscmwth/image/upload/v1754088011/samples/two-ladies.jpg"
+    default: "assets/images/avatar.jpg"
   },
   publicId: {
     type: String,

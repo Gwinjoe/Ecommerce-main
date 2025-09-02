@@ -2,14 +2,14 @@ require("dotenv").config;
 const express = require("express");
 const router = express.Router();
 const { delete_multiple_products, editMultipleProducts, get_product_by_id, category_count, product_count, edit_product, delete_product, getProducts, add_category, get_categories, edit_category, get_category_by_id, delete_category, add_product } = require("../../controllers/productController")
-const { addTo_cart, get_wishlist, addTo_wishlist, deletefrom_cart, deletefrom_wishlist } = require("../../controllers/userController")
+const { addTo_cart, get_wishlist, addTo_wishlist, deletefrom_cart, deletefrom_wishlist, get_wishlist_count } = require("../../controllers/userController")
 const { signup, signout, adminSignout } = require("../../controllers/authController")
-const { get_users, get_user_by_id, edit_user, edit_user_details, delete_user, user_count, add_user, get_user } = require("../../controllers/userController")
+const { notification_count, get_users, get_user_by_id, edit_user, edit_user_details, delete_user, user_count, add_user, get_user } = require("../../controllers/userController")
 const path = require("path");
 const passport = require("passport");
 const multer = require('multer');
 const { deleteAllChats, getChatsThread, getAdminChatsThread, getChats } = require("../../controllers/chat/chatController");
-const { get_order_by_id, add_order, getOrders, get_user_orders, delete_multiple_orders, delete_order, edit_order, editMultipleOrders, order_count } = require("../../controllers/orderController")
+const { get_order_by_id, add_order, getOrders, get_user_orders, delete_multiple_orders, delete_order, edit_order, editMultipleOrders, order_count, get_user_orders_count, get_pending_user_orders_count, revenue, pending_order_count } = require("../../controllers/orderController")
 const { get_brand_by_id, add_brand, getBrands, delete_brand, edit_brand, brand_count } = require("../../controllers/brandController")
 
 const storage = multer.diskStorage({
@@ -154,11 +154,18 @@ router.put("/edit_brand", edit_brand);
 router.delete("/delete_brand/:id", delete_brand);
 
 
+router.get("/revenue", revenue)
 router.get("/usercount", user_count);
 router.get("/productcount", product_count);
 router.get("/brandcount", brand_count);
 router.get("/categorycount", category_count);
 router.get("/ordercount", order_count);
+router.get("/pending_orders", pending_order_count)
+
+router.get("/user_order_count", get_user_orders_count)
+router.get("/pending_order_count", get_pending_user_orders_count)
+router.get("/wishlist_count", get_wishlist_count)
+router.get("/notification_count", notification_count)
 
 router.get("/chats_thread", getChatsThread);
 router.get("/admin_chats_thread", getAdminChatsThread)

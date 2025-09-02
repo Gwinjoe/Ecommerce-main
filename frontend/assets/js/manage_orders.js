@@ -320,7 +320,7 @@ async function renderOrders(page = 1, sort = "date-desc", filter = "", search = 
                 <td>${order.payment.reference}</td>
                 <td>${order.customer.name}</td>
                 <td>${new Date(order.createdAt).toLocaleDateString()}</td>
-                <td>$${parseFloat(order.totalPrice.$numberDecimal).toFixed(2)}</td>
+                <td>₦${parseFloat(order.totalPrice.$numberDecimal).toFixed(2)}</td>
                 <td><span class="status-badge status-${order.status}">${order.status}</span></td>
                 <td>
                     <button class="action-btn view-btn" data-id="${order._id}" data-ga-event="view_order"><i class="fas fa-eye"></i></button>
@@ -348,7 +348,7 @@ async function renderOrders(page = 1, sort = "date-desc", filter = "", search = 
                     <div><strong>Order ID:</strong> ${order.payment.reference}</div>
                     <div><strong>Customer:</strong> ${order.customer.name}</div>
                     <div><strong>Date:</strong> ${new Date(order.createdAt).toLocaleDateString()}</div>
-                    <div><strong>Amount:</strong> $${parseFloat(order.totalPrice.$numberDecimal).toFixed(2)}</div>
+                    <div><strong>Amount:</strong> ₦${parseFloat(order.totalPrice.$numberDecimal).toFixed(2)}</div>
                     <div><strong>Status:</strong> <span class="status-badge status-${order.status}">${order.status}</span></div>
                     <div class="actions">
                         <button class="action-btn view-btn" data-id="${order._id}" data-ga-event="view_order"><i class="fas fa-eye"></i></button>

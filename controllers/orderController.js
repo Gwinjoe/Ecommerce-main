@@ -1,13 +1,48 @@
 const Orders = require("../models/orderSchema");
 const User = require("../models/userModel")
+const Products = require("../models/productSchema")
 const { dohash, dohashValidation, hmacProcess } = require("../utils/hashing");
+
+exports.revenue = async (req, res) => {
+  try {
+    const orders = await Orders.find({ status: 'delivered' });
+    console.log(orders)
+    let totalRevenue = 0;
+
+    orders.forEach(order => {
+      const orderTotal = parseFloat(order.totalPrice.$numberDecimal);
+      console.log(orderTotal)
+      totalRevenue += orderTotal;
+      console.log(totalRevenue)
+    });
+    console.log("totalRevenue - " + totalRevenue)
+    res.status(200).json({ success: true, amount: totalRevenue })
+  } catch (error) {
+    console.error('Error calculating revenue:', error);
+    return 0;
+  }
+}
 
 exports.order_count = async (req, res) => {
   const count = await Orders.countDocuments({});
   res.status(200).json({ success: true, count })
 }
 
+exports.pending_order_count = async (req, res) => {
+  const count = await Orders.countDocuments({ status: "pending" });
+  res.status(200).json({ success: true, count })
+}
 
+exports.get_user_orders_count = async (req, res) => {
+  const id = req.user._id;
+  try {
+    const count = await Orders.countDocuments({ customer: id });
+    res.status(200).json({ success: true, count })
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ success: false, message: "Internal Server Error" })
+  }
+}
 
 exports.getOrders = async (req, res) => {
   try {
@@ -47,6 +82,16 @@ exports.get_user_orders = async (req, res) => {
     }
 
     res.status(201).json({ success: true, result })
+  } catch (err) {
+    if (err) console.log(err)
+  }
+}
+exports.get_pending_user_orders_count = async (req, res) => {
+  const id = req.user._id;
+
+  try {
+    const count = await Orders.countDocuments({ customer: id, status: "pending" })
+    res.status(201).json({ success: true, count })
   } catch (err) {
     if (err) console.log(err)
   }

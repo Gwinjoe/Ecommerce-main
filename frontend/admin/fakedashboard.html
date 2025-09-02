@@ -1,0 +1,1552 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - SWISSTools</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --secondary: #f97316;
+      --secondary-dark: #ea580c;
+      --success: #22c55e;
+      --warning: #eab308;
+      --danger: #ef4444;
+      --light: #f8fafc;
+      --dark: #1e293b;
+      --gray: #64748b;
+      --gray-light: #e2e8f0;
+      --border-radius: 12px;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --transition: all 0.3s ease;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background-color: #f1f5f9;
+      color: var(--dark);
+      line-height: 1.6;
+    }
+
+    .container {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* Sidebar Styles */
+    .sidebar {
+      width: 260px;
+      background: var(--dark);
+      color: white;
+      padding: 1.5rem 1rem;
+      transition: var(--transition);
+      overflow-y: auto;
+      height: 100vh;
+      position: fixed;
+      left: 0;
+      top: 0;
+      z-index: 1000;
+    }
+
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: white;
+      text-decoration: none;
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .logo-img {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      object-fit: cover;
+    }
+
+    .logo-text {
+      color: white;
+    }
+
+    .highlight {
+      color: var(--secondary);
+    }
+
+    .sidebar-list {
+      list-style: none;
+    }
+
+    .sidebar-item {
+      margin-bottom: 0.5rem;
+    }
+
+    .sidebar-item a {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      color: rgba(255, 255, 255, 0.8);
+      text-decoration: none;
+      border-radius: var(--border-radius);
+      transition: var(--transition);
+    }
+
+    .sidebar-item a:hover,
+    .sidebar-item a.active {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+    }
+
+    .sidebar-item i {
+      margin-right: 0.75rem;
+      width: 20px;
+      text-align: center;
+    }
+
+    .unread-count {
+      background: var(--secondary);
+      color: white;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      margin-left: auto;
+    }
+
+    /* Main Content Styles */
+    .main-content {
+      flex: 1;
+      margin-left: 260px;
+      padding: 1.5rem;
+    }
+
+    /* Header Styles */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      background: white;
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 1.5rem;
+    }
+
+    .menu-toggle {
+      display: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+
+    .header-extras {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .theme-toggle-btn,
+    .language-toggle,
+    .notification-btn,
+    .settings-btn {
+      background: none;
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--gray);
+      transition: var(--transition);
+    }
+
+    .theme-toggle-btn:hover,
+    .language-toggle:hover,
+    .notification-btn:hover,
+    .settings-btn:hover {
+      background: var(--gray-light);
+      color: var(--dark);
+    }
+
+    .notification-btn {
+      position: relative;
+    }
+
+    .notification-count {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      background: var(--danger);
+      color: white;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+    }
+
+    .user-profile {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .profile-img {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .profile-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .profile-name {
+      font-weight: 600;
+    }
+
+    .profile-status {
+      font-size: 0.875rem;
+      color: var(--success);
+    }
+
+    .profile-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background: white;
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      width: 200px;
+      padding: 0.5rem 0;
+      list-style: none;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(10px);
+      transition: var(--transition);
+      z-index: 100;
+    }
+
+    .user-profile.active .profile-dropdown {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .profile-dropdown li a {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      color: var(--dark);
+      text-decoration: none;
+      transition: var(--transition);
+    }
+
+    .profile-dropdown li a:hover {
+      background: var(--gray-light);
+    }
+
+    .profile-dropdown i {
+      margin-right: 0.75rem;
+      width: 20px;
+      text-align: center;
+    }
+
+    /* Overview Cards */
+    .overview-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .dashboard-card {
+      background: white;
+      border-radius: var(--border-radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .dashboard-card i {
+      font-size: 2rem;
+      color: var(--primary);
+      margin-bottom: 1rem;
+    }
+
+    .dashboard-card h3 {
+      font-size: 1rem;
+      color: var(--gray);
+      margin-bottom: 0.5rem;
+    }
+
+    .dashboard-card p {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .growth {
+      display: flex;
+      align-items: center;
+      font-size: 0.875rem;
+      color: var(--success);
+    }
+
+    .growth.down {
+      color: var(--danger);
+    }
+
+    .growth i {
+      font-size: 0.875rem;
+      margin-left: 0.25rem;
+      margin-bottom: 0;
+    }
+
+    .metric-chart {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 100px;
+      height: 60px;
+      opacity: 0.7;
+    }
+
+    /* Charts Section */
+    .overview-charts {
+      background: white;
+      border-radius: var(--border-radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+      margin-bottom: 1.5rem;
+    }
+
+    .overview-charts h2 {
+      margin-bottom: 1.5rem;
+      font-size: 1.5rem;
+    }
+
+    .chart-container {
+      height: 300px;
+      position: relative;
+    }
+
+    /* Recent Orders */
+    .recent-orders {
+      background: white;
+      border-radius: var(--border-radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+      margin-bottom: 1.5rem;
+    }
+
+    .recent-orders h2 {
+      margin-bottom: 1.5rem;
+      font-size: 1.5rem;
+    }
+
+    .filters {
+      background: var(--gray-light);
+      border-radius: var(--border-radius);
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .filter-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .filter-group label {
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+
+    .filter-group select,
+    .filter-group input {
+      padding: 0.5rem;
+      border: 1px solid var(--gray-light);
+      border-radius: 6px;
+      background: white;
+    }
+
+    .filter-actions {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .reset-filters {
+      background: var(--gray);
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .reset-filters:hover {
+      background: var(--dark);
+    }
+
+    .table-container {
+      overflow-x: auto;
+    }
+
+    .orders-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .orders-table th,
+    .orders-table td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid var(--gray-light);
+    }
+
+    .orders-table th {
+      font-weight: 600;
+      background: var(--gray-light);
+    }
+
+    .orders-table tr:hover {
+      background: #f8fafc;
+    }
+
+    .status {
+      padding: 0.25rem 0.5rem;
+      border-radius: 20px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      display: inline-block;
+    }
+
+    .status.pending {
+      background: #fef3c7;
+      color: #d97706;
+    }
+
+    .status.shipped {
+      background: #dbeafe;
+      color: #2563eb;
+    }
+
+    .status.delivered {
+      background: #dcfce7;
+      color: #16a34a;
+    }
+
+    .view-order-btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .view-order-btn:hover {
+      background: var(--primary-dark);
+    }
+
+    /* Quick Actions */
+    .quick-actions {
+      background: white;
+      border-radius: var(--border-radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+      margin-bottom: 1.5rem;
+    }
+
+    .quick-actions h2 {
+      margin-bottom: 1.5rem;
+      font-size: 1.5rem;
+    }
+
+    .actions-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    .action-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--primary);
+      color: white;
+      text-decoration: none;
+      padding: 1rem;
+      border-radius: var(--border-radius);
+      transition: var(--transition);
+      text-align: center;
+      font-weight: 600;
+    }
+
+    .action-btn:hover {
+      background: var(--primary-dark);
+      transform: translateY(-3px);
+    }
+
+    /* Footer */
+    .site-footer {
+      background: var(--dark);
+      color: white;
+      padding: 2rem 0 0;
+      margin-top: 2rem;
+    }
+
+    .footer-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 2rem;
+      padding: 0 1.5rem;
+    }
+
+    .footer-column h3,
+    .footer-column h4 {
+      margin-bottom: 1rem;
+    }
+
+    .footer-links {
+      list-style: none;
+    }
+
+    .footer-links li {
+      margin-bottom: 0.5rem;
+    }
+
+    .footer-links a {
+      color: rgba(255, 255, 255, 0.8);
+      text-decoration: none;
+      transition: var(--transition);
+    }
+
+    .footer-links a:hover {
+      color: white;
+    }
+
+    .footer-contact p {
+      display: flex;
+      align-items: center;
+      margin-bottom: 0.5rem;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .footer-contact i {
+      margin-right: 0.5rem;
+    }
+
+    .footer-newsletter {
+      display: flex;
+      margin-bottom: 1rem;
+    }
+
+    .footer-newsletter input {
+      flex: 1;
+      padding: 0.5rem;
+      border: none;
+      border-radius: 4px 0 0 4px;
+    }
+
+    .footer-newsletter button {
+      background: var(--secondary);
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 0 4px 4px 0;
+      cursor: pointer;
+    }
+
+    .footer-socials {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .social-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      border-radius: 50%;
+      transition: var(--transition);
+    }
+
+    .social-icon:hover {
+      background: var(--secondary);
+    }
+
+    .footer-bottom {
+      text-align: center;
+      padding: 1.5rem;
+      margin-top: 2rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .scroll-top-btn {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      width: 50px;
+      height: 50px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      transition: var(--transition);
+      z-index: 99;
+    }
+
+    .scroll-top-btn:hover {
+      background: var(--primary-dark);
+      transform: translateY(-3px);
+    }
+
+    /* Modals */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: var(--transition);
+    }
+
+    .modal.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: var(--border-radius);
+      width: 90%;
+      max-width: 500px;
+      padding: 2rem;
+      box-shadow: var(--shadow);
+      transform: translateY(-20px);
+      transition: var(--transition);
+    }
+
+    .modal.active .modal-content {
+      transform: translateY(0);
+    }
+
+    .modal h2 {
+      margin-bottom: 1.5rem;
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid var(--gray-light);
+      border-radius: 6px;
+    }
+
+    .error-message {
+      color: var(--danger);
+      font-size: 0.875rem;
+      margin-top: 0.25rem;
+      display: none;
+    }
+
+    .error-message.active {
+      display: block;
+    }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .form-actions button {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .close-btn {
+      background: var(--gray);
+      color: white;
+    }
+
+    .close-btn:hover {
+      background: var(--dark);
+    }
+
+    .save-btn {
+      background: var(--primary);
+      color: white;
+    }
+
+    .save-btn:hover {
+      background: var(--primary-dark);
+    }
+
+    /* Responsive Styles */
+    @media (max-width: 1024px) {
+      .sidebar {
+        transform: translateX(-100%);
+      }
+
+      .sidebar.active {
+        transform: translateX(0);
+      }
+
+      .main-content {
+        margin-left: 0;
+      }
+
+      .menu-toggle {
+        display: block;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .header-extras {
+        display: none;
+      }
+
+      .filter-row {
+        grid-template-columns: 1fr;
+      }
+
+      .overview-cards {
+        grid-template-columns: 1fr;
+      }
+
+      .actions-container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Animation Classes */
+    .animate-fade {
+      animation: fadeIn 0.6s ease forwards;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Dark Mode */
+    body.dark-mode {
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+
+    body.dark-mode .header,
+    body.dark-mode .dashboard-card,
+    body.dark-mode .overview-charts,
+    body.dark-mode .recent-orders,
+    body.dark-mode .quick-actions,
+    body.dark-mode .modal-content {
+      background: #1e293b;
+      color: #e2e8f0;
+    }
+
+    body.dark-mode .orders-table th {
+      background: #334155;
+    }
+
+    body.dark-mode .orders-table tr:hover {
+      background: #334155;
+    }
+
+    body.dark-mode .filter-group select,
+    body.dark-mode .filter-group input {
+      background: #334155;
+      color: #e2e8f0;
+      border-color: #475569;
+    }
+
+    body.dark-mode .filters {
+      background: #334155;
+    }
+
+    body.dark-mode .reset-filters {
+      background: #475569;
+    }
+
+    /* Socket Connection Status */
+    .connection-status {
+      position: fixed;
+      bottom: 1rem;
+      left: 1rem;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.875rem;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .connection-status.connected {
+      background: var(--success);
+      color: white;
+    }
+
+    .connection-status.disconnected {
+      background: var(--danger);
+      color: white;
+    }
+
+    .connection-status i {
+      font-size: 0.75rem;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Socket Connection Status -->
+  <div class="connection-status disconnected">
+    <i class="fas fa-circle"></i>
+    <span>Disconnected</span>
+  </div>
+
+  <div class="container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <a href="/" class="logo">
+          <img
+            src="https://res.cloudinary.com/dlmscmwth/image/upload/f_auto,q_auto/c_fill,g_auto,h_500,w_500/fgma0tw1jvxwaanuyihr?_a=BAMAK+Go0"
+            alt="SWISSTools Logo" class="logo-img">
+          <span class="logo-text">SWISS<span class="highlight">Tools</span></span>
+        </a>
+      </div>
+      <ul class="sidebar-list">
+        <li class="sidebar-item"><a href="/admin" class="active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+        </li>
+        <li class="sidebar-item"><a href="/admin/orders"><i class="fas fa-shopping-bag"></i> View Orders</a></li>
+        <li class="sidebar-item"><a href="/admin/manage_users"><i class="fas fa-users"></i> Manage Users</a></li>
+        <li class="sidebar-item"><a href="/admin/categories"><i class="fas fa-tags"></i> Categories</a></li>
+        <li class="sidebar-item"><a href="/admin/product"><i class="fas fa-brands fa-product-hunt"></i> Products</a>
+        </li>
+        <li class="sidebar-item"><a href="/admin/add_product"><i class="fas fa-plus-circle"></i> Add Product</a></li>
+        <li class="sidebar-item"><a href="/admin/brands"><i class="fas fa-copyright"></i> Manage Brands</a></li>
+        <li class="sidebar-item"><a href="/admin/chat"><i class="fas fa-comments"></i> Chat <span
+              class="unread-count">3</span></a></li>
+        <li class="sidebar-item"><a href="/admin/logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+      </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Header -->
+      <header class="header">
+        <div class="menu-toggle">
+          <i class="fas fa-bars"></i>
+        </div>
+        <div class="header-extras">
+          <div class="theme-toggle">
+            <button type="button" class="theme-toggle-btn" title="Toggle Theme">
+              <i class="fas fa-moon"></i>
+            </button>
+          </div>
+          <div class="notification">
+            <button type="button" class="notification-btn" title="Notifications">
+              <i class="fas fa-bell"></i>
+              <span class="notification-count">2</span>
+            </button>
+          </div>
+          <div class="user-profile">
+            <img
+              src="https://res.cloudinary.com/dlmscmwth/image/upload/f_auto,q_auto/c_fill,g_auto,h_500,w_500/fgma0tw1jvxwaanuyihr?_a=BAMAK+Go0"
+              alt="Admin Profile" class="profile-img">
+            <div class="profile-info">
+              <span class="profile-name">Admin User</span>
+              <span class="profile-status">Active</span>
+            </div>
+            <ul class="profile-dropdown">
+              <li><a href="/admin"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+              <li><a href="/admin/users"><i class="fas fa-users"></i> Manage Users</a></li>
+              <li><a href="/admin/categories"><i class="fas fa-tags"></i> Categories</a></li>
+              <li><a href="/admin/logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+            </ul>
+          </div>
+        </div>
+      </header>
+
+      <!-- Overview -->
+      <section class="overview">
+        <h2>Overview</h2>
+        <div class="overview-cards">
+          <div class="dashboard-card">
+            <i class="fas fa-shopping-bag"></i>
+            <h3>Total Orders</h3>
+            <p data-metric="total-orders">1,234</p>
+            <div class="growth">50% <i class="fas fa-arrow-up"></i></div>
+            <canvas class="metric-chart" data-metric="total-orders-chart"></canvas>
+          </div>
+          <div class="dashboard-card">
+            <i class="fas fa-box"></i>
+            <h3>Total Products</h3>
+            <p data-metric="total-products">567</p>
+            <div class="growth">45% <i class="fas fa-arrow-up"></i></div>
+            <canvas class="metric-chart" data-metric="total-products-chart"></canvas>
+          </div>
+          <div class="dashboard-card">
+            <i class="fas fa-users"></i>
+            <h3>Total Users</h3>
+            <p data-metric="total-users">2,890</p>
+            <div class="growth">30% <i class="fas fa-arrow-up"></i></div>
+            <canvas class="metric-chart" data-metric="total-users-chart"></canvas>
+          </div>
+          <div class="dashboard-card">
+            <i class="fas fa-tags"></i>
+            <h3>Total Categories</h3>
+            <p data-metric="total-categories">45</p>
+            <div class="growth">20% <i class="fas fa-arrow-up"></i></div>
+            <canvas class="metric-chart" data-metric="total-categories-chart"></canvas>
+          </div>
+          <div class="dashboard-card">
+            <i class="fas fa-dollar-sign"></i>
+            <h3>Revenue</h3>
+            <p data-metric="revenue">$12,345</p>
+            <div class="growth">60% <i class="fas fa-arrow-up"></i></div>
+            <canvas class="metric-chart" data-metric="revenue-chart"></canvas>
+          </div>
+          <div class="dashboard-card">
+            <i class="fas fa-clock"></i>
+            <h3>Pending Orders</h3>
+            <p data-metric="pending-orders">89</p>
+            <div class="growth">25% <i class="fas fa-arrow-up"></i></div>
+            <canvas class="metric-chart" data-metric="pending-orders-chart"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- Overview Charts -->
+      <section class="overview-charts">
+        <h2>Orders Per Day</h2>
+        <div class="chart-container">
+          <canvas id="ordersChart"></canvas>
+        </div>
+      </section>
+
+      <!-- Recent Orders -->
+      <section class="recent-orders">
+        <h2>Recent Orders</h2>
+        <div class="filters">
+          <div class="filter-row">
+            <div class="filter-group">
+              <label for="status-filter">Status</label>
+              <select id="status-filter" multiple>
+                <option value="all">All</option>
+                <option value="pending">Pending</option>
+                <option value="shipped">Shipped</option>
+                <option value="delivered">Delivered</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label for="category-filter">Category</label>
+              <select id="category-filter">
+                <option value="all">All</option>
+                <option value="electronics">Electronics</option>
+                <option value="tools">Tools</option>
+                <option value="materials">Materials</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label for="amount-filter">Amount</label>
+              <select id="amount-filter">
+                <option value="all">All</option>
+                <option value="0-100">$0 - $100</option>
+                <option value="100-500">$100 - $500</option>
+                <option value="500+">$500+</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label for="start-date">Start Date</label>
+              <input type="date" id="start-date">
+            </div>
+            <div class="filter-group">
+              <label for="end-date">End Date</label>
+              <input type="date" id="end-date">
+            </div>
+            <div class="filter-group">
+              <label for="search">Search</label>
+              <input type="text" id="search" placeholder="Order ID or Customer">
+            </div>
+            <div class="filter-group">
+              <label for="sort-by">Sort By</label>
+              <select id="sort-by">
+                <option value="id-asc">Order ID (Asc)</option>
+                <option value="id-desc">Order ID (Desc)</option>
+                <option value="date-asc">Date (Asc)</option>
+                <option value="date-desc">Date (Desc)</option>
+                <option value="customer-asc">Customer (Asc)</option>
+                <option value="customer-desc">Customer (Desc)</option>
+                <option value="amount-asc">Amount (Asc)</option>
+                <option value="amount-desc">Amount (Desc)</option>
+              </select>
+            </div>
+          </div>
+          <div class="filter-actions">
+            <button type="button" class="reset-filters">Reset Filters</button>
+          </div>
+        </div>
+        <div class="table-container">
+          <table class="orders-table">
+            <thead>
+              <tr>
+                <th>Order ID</th>
+                <th>Customer</th>
+                <th>Date</th>
+                <th>Category</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="orders-table-body">
+              <!-- Orders will be populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Quick Actions -->
+      <section class="quick-actions">
+        <h2>Quick Actions</h2>
+        <div class="actions-container">
+          <a href="/admin/add_product" class="action-btn">Add Product</a>
+          <a href="/admin/manage_users" class="action-btn">Manage Users</a>
+          <a href="/admin/categories" class="action-btn">Manage Categories</a>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal" id="settings-modal">
+    <div class="modal-content">
+      <h2>Settings</h2>
+      <div class="settings-form">
+        <div class="form-group">
+          <label for="name">Full Name</label>
+          <input type="text" id="name" placeholder="Enter your name">
+          <div class="error-message"></div>
+        </div>
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" placeholder="Enter your email">
+          <div class="error-message"></div>
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" placeholder="Enter new password">
+          <div class="error-message"></div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="close-btn" data-modal="settings-modal">Close</button>
+          <button type="button" class="save-btn">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notifications Modal -->
+  <div class="modal" id="notifications-modal">
+    <div class="modal-content">
+      <h2>Notifications</h2>
+      <div class="notifications-body" id="notifications-list">
+        <!-- Notifications will be populated dynamically -->
+      </div>
+      <div class="form-actions">
+        <button type="button" class="close-btn" data-modal="notifications-modal">Close</button>
+        <button type="button" class="save-btn" id="clear-notifications">Clear All</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="footer-container">
+      <div class="footer-column animate-fade">
+        <h3 class="footer-logo">SWISS<span class="highlight">Tools</span></h3>
+        <p>Your trusted partner in engineering & construction tools.</p>
+        <div class="footer-contact">
+          <p><i class="fas fa-map-marker-alt"></i> 5 Cherubim Road, Mile 3 Market, Port Harcourt.</p>
+          <p><i class="fas fa-phone-alt"></i> +234 913 232 8654</p>
+          <p><i class="fas fa-envelope"></i> support@swisstools.store</p>
+        </div>
+      </div>
+      <div class="footer-column animate-fade">
+        <h4>Quick Links</h4>
+        <ul class="footer-links">
+          <li><a href="/admin/add_product">Add Product</a></li>
+          <li><a href="/admin/view_orders">View Orders</a></li>
+          <li><a href="/admin/manage_users">Manage Users</a></li>
+          <li><a href="/admin/categories">Categories</a></li>
+        </ul>
+      </div>
+      <div class="footer-column animate-fade">
+        <h4>Stay Updated</h4>
+        <p>Subscribe to get updates & offers.</p>
+        <div class="footer-newsletter">
+          <input type="email" placeholder="Enter your email" required>
+          <button type="button"><i class="fas fa-paper-plane"></i></button>
+        </div>
+        <div class="footer-socials">
+          <a href="#" class="social-icon"><i class="fab fa-facebook-f"></i></a>
+          <a href="#" class="social-icon"><i class="fab fa-instagram"></i></a>
+          <a href="#" class="social-icon"><i class="fab fa-x-twitter"></i></a>
+          <a href="#" class="social-icon"><i class="fab fa-linkedin-in"></i></a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© <span class="year"></span> SWISSTools. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <button type="button" class="scroll-top-btn">
+    <i class="fas fa-arrow-up"></i>
+  </button>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      // Initialize Socket.IO connection
+      const socket = io('/admin_dashboard');
+      const connectionStatus = document.querySelector('.connection-status');
+
+      // Update connection status
+      socket.on('connect', () => {
+        connectionStatus.className = 'connection-status connected';
+        connectionStatus.innerHTML = '<i class="fas fa-circle"></i><span>Connected</span>';
+        console.log('Connected to server');
+      });
+
+      socket.on('disconnect', () => {
+        connectionStatus.className = 'connection-status disconnected';
+        connectionStatus.innerHTML = '<i class="fas fa-circle"></i><span>Disconnected</span>';
+        console.log('Disconnected from server');
+      });
+
+      // Handle metrics update from server
+      socket.on('update_metrics', (data) => {
+        updateMetrics(data);
+      });
+
+      // Handle orders update from server
+      socket.on('update_orders', (data) => {
+        updateOrdersTable(data);
+      });
+
+      // Handle notifications from server
+      socket.on('new_notification', (data) => {
+        addNotification(data);
+      });
+
+      // Request initial data from server
+      socket.emit('request_data');
+
+      // Set current year in footer
+      document.querySelector('.year').textContent = new Date().getFullYear();
+
+      // Toggle sidebar on mobile
+      document.querySelector('.menu-toggle').addEventListener('click', function () {
+        document.querySelector('.sidebar').classList.toggle('active');
+      });
+
+      // Toggle theme
+      document.querySelector('.theme-toggle-btn').addEventListener('click', function () {
+        document.body.classList.toggle('dark-mode');
+        const icon = this.querySelector('i');
+        if (document.body.classList.contains('dark-mode')) {
+          icon.classList.remove('fa-moon');
+          icon.classList.add('fa-sun');
+        } else {
+          icon.classList.remove('fa-sun');
+          icon.classList.add('fa-moon');
+        }
+      });
+
+      // Toggle user profile dropdown
+      document.querySelector('.user-profile').addEventListener('click', function (e) {
+        e.stopPropagation();
+        this.classList.toggle('active');
+      });
+
+      // Close dropdown when clicking outside
+      document.addEventListener('click', function () {
+        document.querySelector('.user-profile').classList.remove('active');
+      });
+
+      // Notifications button
+      document.querySelector('.notification-btn').addEventListener('click', function () {
+        openModal('notifications-modal');
+      });
+
+      // Settings button
+      document.querySelector('.settings-btn').addEventListener('click', function () {
+        openModal('settings-modal');
+      });
+
+      // Modal functionality
+      function openModal(modalId) {
+        document.getElementById(modalId).classList.add('active');
+      }
+
+      document.querySelectorAll('.close-btn').forEach(button => {
+        button.addEventListener('click', function () {
+          const modalId = this.getAttribute('data-modal');
+          document.getElementById(modalId).classList.remove('active');
+        });
+      });
+
+      // Close modal when clicking outside
+      document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('click', function (e) {
+          if (e.target === this) {
+            this.classList.remove('active');
+          }
+        });
+      });
+
+      // Scroll to top button
+      const scrollTopBtn = document.querySelector('.scroll-top-btn');
+      window.addEventListener('scroll', function () {
+        if (window.pageYOffset > 300) {
+          scrollTopBtn.style.display = 'block';
+        } else {
+          scrollTopBtn.style.display = 'none';
+        }
+      });
+
+      scrollTopBtn.addEventListener('click', function () {
+        window.scrollTo({top: 0, behavior: 'smooth'});
+      });
+
+      // Clear notifications
+      document.getElementById('clear-notifications').addEventListener('click', function () {
+        document.getElementById('notifications-list').innerHTML = '<p>No notifications available</p>';
+        document.querySelector('.notification-count').textContent = '0';
+      });
+
+      // Initialize charts
+      initCharts();
+
+      // Function to update metrics
+      function updateMetrics(data) {
+        for (const [key, value] of Object.entries(data)) {
+          const element = document.querySelector(`[data-metric="${key}"]`);
+          if (element) {
+            // Animate the value change
+            const currentValue = parseInt(element.textContent.replace(/\D/g, ''));
+            const newValue = parseInt(value);
+
+            if (currentValue !== newValue) {
+              let start = currentValue;
+              const increment = newValue > currentValue ? 1 : -1;
+              const duration = 1000; // ms
+              const steps = 50;
+              const stepTime = duration / steps;
+
+              const timer = setInterval(() => {
+                start += increment;
+                element.textContent = key === 'revenue' ? `$${start}` : start.toLocaleString();
+
+                if ((increment > 0 && start >= newValue) || (increment < 0 && start <= newValue)) {
+                  element.textContent = key === 'revenue' ? `$${newValue}` : newValue.toLocaleString();
+                  clearInterval(timer);
+                }
+              }, stepTime);
+            }
+          }
+        }
+      }
+
+      // Function to update orders table
+      function updateOrdersTable(orders) {
+        const tableBody = document.getElementById('orders-table-body');
+        tableBody.innerHTML = '';
+
+        orders.forEach(order => {
+          const row = document.createElement('tr');
+          row.setAttribute('data-status', order.status);
+          row.setAttribute('data-date', order.date);
+          row.setAttribute('data-category', order.category);
+          row.setAttribute('data-amount', order.amount);
+
+          row.innerHTML = `
+            <td>${order.id}</td>
+            <td>${order.customer}</td>
+            <td>${order.date}</td>
+            <td>${order.category}</td>
+            <td>$${order.amount}</td>
+            <td class="status ${order.status}">${order.status.charAt(0).toUpperCase() + order.status.slice(1)}</td>
+            <td><button class="view-order-btn" data-order-id="${order._id}">View</button></td>
+          `;
+
+          tableBody.appendChild(row);
+        });
+
+        // Add event listeners to view buttons
+        document.querySelectorAll('.view-order-btn').forEach(button => {
+          button.addEventListener('click', function () {
+            const orderId = this.getAttribute('data-order-id');
+            window.location.href = `/admin/order_details?id=${orderId}`;
+          });
+        });
+      }
+
+      // Function to add notification
+      function addNotification(notification) {
+        const notificationsList = document.getElementById('notifications-list');
+        const notificationCount = document.querySelector('.notification-count');
+
+        // Create notification element
+        const notificationElement = document.createElement('div');
+        notificationElement.classList.add('notification-item');
+        notificationElement.innerHTML = `
+          <p>${notification.message}</p>
+          <span>${new Date(notification.date).toLocaleString()}</span>
+        `;
+
+        // Add to top of list
+        if (notificationsList.firstChild) {
+          notificationsList.insertBefore(notificationElement, notificationsList.firstChild);
+        } else {
+          notificationsList.appendChild(notificationElement);
+        }
+
+        // Update notification count
+        const currentCount = parseInt(notificationCount.textContent);
+        notificationCount.textContent = currentCount + 1;
+      }
+
+      // Initialize charts
+      function initCharts() {
+        // Orders per day chart
+        const ordersCtx = document.getElementById('ordersChart').getContext('2d');
+        new Chart(ordersCtx, {
+          type: 'line',
+          data: {
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            datasets: [{
+              label: 'Orders',
+              data: [12, 19, 15, 17, 14, 21, 25],
+              backgroundColor: 'rgba(37, 99, 235, 0.2)',
+              borderColor: 'rgba(37, 99, 235, 1)',
+              borderWidth: 2,
+              tension: 0.4,
+              fill: true
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: {
+                  drawBorder: false
+                }
+              },
+              x: {
+                grid: {
+                  display: false
+                }
+              }
+            },
+            plugins: {
+              legend: {
+                display: false
+              }
+            }
+          }
+        });
+
+        // Mini charts for metrics
+        document.querySelectorAll('.metric-chart').forEach(canvas => {
+          const ctx = canvas.getContext('2d');
+          new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: ['', '', '', '', '', ''],
+              datasets: [{
+                data: [12, 14, 10, 16, 13, 15],
+                borderColor: 'rgba(37, 99, 235, 1)',
+                borderWidth: 2,
+                tension: 0.4,
+                fill: false,
+                pointRadius: 0
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                y: {
+                  display: false
+                },
+                x: {
+                  display: false
+                }
+              },
+              plugins: {
+                legend: {
+                  display: false
+                }
+              }
+            }
+          });
+        });
+      }
+
+      // Simulate initial data (to be replaced with real data from server)
+      setTimeout(() => {
+        updateMetrics({
+          'total-orders': '1257',
+          'total-products': '592',
+          'total-users': '2934',
+          'total-categories': '47',
+          'revenue': '13250',
+          'pending-orders': '73'
+        });
+
+        updateOrdersTable([
+          {
+            _id: '68ac68d4cc82836ae073f0ed',
+            id: '#O001',
+            customer: 'John Doe',
+            date: '2025-07-05',
+            category: 'Electronics',
+            amount: 150,
+            status: 'pending'
+          },
+          {
+            _id: '68ac68d4cc82836ae073f0ee',
+            id: '#O002',
+            customer: 'Jane Smith',
+            date: '2025-07-04',
+            category: 'Tools',
+            amount: 300,
+            status: 'shipped'
+          },
+          {
+            _id: '68ac68d4cc82836ae073f0ef',
+            id: '#O003',
+            customer: 'Mike Johnson',
+            date: '2025-07-03',
+            category: 'Materials',
+            amount: 450,
+            status: 'delivered'
+          }
+        ]);
+
+        addNotification({
+          message: 'New order #O004 placed by Emily Davis',
+          date: new Date()
+        });
+      }, 1000);
+
+      // Simulate real-time updates
+      setInterval(() => {
+        // Randomly update metrics
+        const metrics = [
+          'total-orders',
+          'total-products',
+          'total-users',
+          'total-categories',
+          'revenue',
+          'pending-orders'
+        ];
+
+        const randomMetric = metrics[Math.floor(Math.random() * metrics.length)];
+        const currentValue = parseInt(document.querySelector(`[data-metric="${randomMetric}"]`).textContent.replace(/\D/g, ''));
+        const newValue = randomMetric === 'revenue' ?
+          currentValue + Math.floor(Math.random() * 100) :
+          currentValue + Math.floor(Math.random() * 5);
+
+        const update = {};
+        update[randomMetric] = randomMetric === 'revenue' ? `$${newValue}` : newValue;
+
+        updateMetrics(update);
+      }, 5000);
+    });
+  </script>
+</body>
+
+</html>

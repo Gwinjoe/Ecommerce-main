@@ -129,7 +129,6 @@ exports.edit_user_details = async (req, res) => {
       return res.status(401).json({ success: false, message: "Can't modify ADMIN" })
     }
     const existingUser = await User.findById(id).select("+password +location");
-
     const image = req.file;
     const imageCloudinary = image && await uploader(image.path);
     if (!existingUser) {
@@ -182,8 +181,37 @@ exports.edit_user_details = async (req, res) => {
 
 
 exports.user_count = async (req, res) => {
-  const userCount = await User.countDocuments({});
-  res.status(200).json({ success: true, userCount })
+  const count = await User.countDocuments({});
+  res.status(200).json({ success: true, count })
+}
+
+exports.notification_count = async (req, res) => {
+  const id = req.user._id
+  try {
+    const existingUser = await User.findById(id);
+    if (!existingUser) {
+      return res.status(401).json({ success: false, message: "user not found" })
+    }
+    const result = existingUser.notifications.length;
+    res.status(200).json({ success: true, result })
+    console.log(err)
+  } catch (err) {
+    console.log(err)
+    res.status(500).json({ success: false, message: "Internal Server Error" })
+  }
+}
+exports.add_notification = async (id, notification) => {
+  try {
+    const existingUser = await User.findById(id);
+    if (!existingUser) {
+      return
+    }
+    existingUser.notifications.push(notification);
+    await existingUser.save();
+  } catch (err) {
+    console.log(err)
+  }
+
 }
 
 exports.delete_user = async (req, res) => {
@@ -238,6 +266,20 @@ exports.deletefrom_wishlist = async (req, res) => {
   }
 }
 
+exports.get_wishlist_count = async (req, res) => {
+  const id = req.user._id;
+
+  try {
+    const existingUser = await User.findById(id);
+    if (!existingUser) {
+      return res.status(401).json({ success: false, message: "user not found!" })
+    }
+    const count = existingUser.wishlist.length;
+    res.status(201).json({ success: true, count })
+  } catch (err) {
+    if (err) console.log(err)
+  }
+}
 exports.addTo_cart = async (req, res) => {
   const { id, cartItem } = req.body;
   try {
@@ -275,6 +317,7 @@ exports.addTo_wishlist = async (req, res) => {
     }
 
     const results = await existingUser.save();
+
     res.status(201).json({ success: true, message: "Item added successfully" });
   } catch (err) {
     if (err) console.log(err);

@@ -163,7 +163,7 @@ async function renderProducts(page = 1, sort = "name-asc", filter = "", search =
                 <td><input type="checkbox" class="select-product" data-id="${product._id}" data-ga-event="select_product"></td>
                 <td>${product.name}</td>
                 <td>${product.category.name.charAt(0).toUpperCase() + product.category.name.slice(1)}</td>
-                <td>$${product.price.$numberDecimal}</td>
+                <td>₦${product.price.$numberDecimal}</td>
                 <td>${product.stock}</td>
                 <td><img src="${product.images.mainImage.url}" alt="${product.name}"></td>
                 <td>
@@ -186,7 +186,7 @@ async function renderProducts(page = 1, sort = "name-asc", filter = "", search =
                     <div><input type="checkbox" class="select-product" data-id="${product._id}" data-ga-event="select_product"></div>
                     <div><strong>Name:</strong> ${product.name}</div>
                     <div><strong>Category:</strong> ${product.category.name.charAt(0).toUpperCase() + product.category.name.slice(1)}</div>
-                    <div><strong>Price:</strong> $${product.price.$numberDecimal}</div>
+                    <div><strong>Price:</strong> ₦${product.price.$numberDecimal}</div>
                     <div><strong>Stock:</strong> ${product.stock}</div>
                     <div><img src="${product.images.mainImage.url}" alt="${product.name}"></div>
                     <div class="actions">

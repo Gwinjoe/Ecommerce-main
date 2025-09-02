@@ -1,726 +1,598 @@
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
+document.addEventListener('DOMContentLoaded', function() {
+  // Initialize Socket.IO connection
+  const socket = io('/admin_dashboard');
+  const connectionStatus = document.createElement('div');
+  connectionStatus.className = 'connection-status disconnected';
+  connectionStatus.innerHTML = '<i class="fas fa-circle"></i><span>Disconnected</span>';
+  document.body.appendChild(connectionStatus);
 
-// Log script loading for debugging
-console.log("index.js loaded");
+  // Update connection status
+  socket.on('connect', () => {
+    connectionStatus.className = 'connection-status connected';
+    connectionStatus.innerHTML = '<i class="fas fa-circle"></i><span>Connected</span>';
+    console.log('Connected to server');
 
-try {
-    gsap.registerPlugin(ScrollTrigger);
-} catch (error) {
-    console.error("Failed to register GSAP ScrollTrigger:", error);
-}
+    // Request initial data
+    socket.emit('request_data');
+  });
 
-// Google Analytics event tracking function
-function trackEvent(eventName, eventParams = {}) {
-    if (typeof gtag === 'function') {
-        gtag('event', eventName, eventParams);
+  socket.on('disconnect', () => {
+    connectionStatus.className = 'connection-status disconnected';
+    connectionStatus.innerHTML = '<i class="fas fa-circle"></i><span>Disconnected</span>';
+    console.log('Disconnected from server');
+  });
+
+  // Handle metrics update from server
+  socket.on('update_metrics', (data) => {
+    updateMetrics(data);
+  });
+
+  // Handle orders update from server
+  socket.on('update_orders', (data) => {
+    updateOrdersTable(data);
+  });
+
+  // Handle notifications from server
+  socket.on('new_notification', (data) => {
+    addNotification(data);
+  });
+
+  // Handle chat notifications from server
+  socket.on('chat_notification', (data) => {
+    updateChatNotification(data);
+  });
+
+  // Set current year in footer
+  document.querySelector('.year').textContent = new Date().getFullYear();
+
+  // Toggle sidebar on mobile
+  document.querySelector('.menu-toggle').addEventListener('click', function() {
+    document.querySelector('.sidebar').classList.toggle('active');
+  });
+
+  // Toggle theme
+  document.querySelector('.theme-toggle-btn').addEventListener('click', function() {
+    document.body.classList.toggle('dark-mode');
+    const icon = this.querySelector('i');
+    if (document.body.classList.contains('dark-mode')) {
+      icon.classList.remove('fa-moon');
+      icon.classList.add('fa-sun');
+      localStorage.setItem('theme', 'dark');
     } else {
-        console.warn("Google Analytics not loaded, event not tracked:", eventName, eventParams);
+      icon.classList.remove('fa-sun');
+      icon.classList.add('fa-moon');
+      localStorage.setItem('theme', 'light');
     }
-}
+  });
 
-document.addEventListener("DOMContentLoaded", () => {
-    console.log("DOMContentLoaded fired");
+  // Check for saved theme preference
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme === 'dark') {
+    document.body.classList.add('dark-mode');
+    document.querySelector('.theme-toggle-btn i').classList.remove('fa-moon');
+    document.querySelector('.theme-toggle-btn i').classList.add('fa-sun');
+  }
 
-    // Dummy data for notifications
-    const notifications = [
-        { id: 1, message: "New user registered: John Doe", date: "2025-07-06" },
-        { id: 2, message: "Order #O001 requires review", date: "2025-07-05" }
+  // Toggle language selector
+  document.querySelector('.language-toggle').addEventListener('click', function() {
+    document.querySelector('.language-selector').classList.toggle('active');
+  });
+
+  // Language selection
+  document.querySelectorAll('.language-options li').forEach(option => {
+    option.addEventListener('click', function() {
+      const lang = this.getAttribute('data-lang');
+      document.querySelector('.language-selector').classList.remove('active');
+      // Here you would typically set the language
+      console.log('Language changed to:', lang);
+    });
+  });
+
+  // Toggle user profile dropdown
+  document.querySelector('.user-profile').addEventListener('click', function(e) {
+    e.stopPropagation();
+    this.classList.toggle('active');
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', function() {
+    document.querySelector('.user-profile').classList.remove('active');
+    document.querySelector('.language-selector').classList.remove('active');
+  });
+
+  // Notifications button
+  document.querySelector('.notification-btn').addEventListener('click', function() {
+    openModal('notifications-modal');
+  });
+
+  // Settings button
+  document.querySelector('.settings-btn').addEventListener('click', function() {
+    openModal('settings-modal');
+  });
+
+  // Modal functionality
+  function openModal(modalId) {
+    document.getElementById(modalId).classList.add('active');
+  }
+
+  document.querySelectorAll('.close-btn').forEach(button => {
+    button.addEventListener('click', function() {
+      const modalId = this.getAttribute('data-modal');
+      document.getElementById(modalId).classList.remove('active');
+    });
+  });
+
+  // Close modal when clicking outside
+  document.querySelectorAll('.modal').forEach(modal => {
+    modal.addEventListener('click', function(e) {
+      if (e.target === this) {
+        this.classList.remove('active');
+      }
+    });
+  });
+
+  // Scroll to top button
+  const scrollTopBtn = document.querySelector('.scroll-top-btn');
+  window.addEventListener('scroll', function() {
+    if (window.pageYOffset > 300) {
+      scrollTopBtn.style.display = 'block';
+    } else {
+      scrollTopBtn.style.display = 'none';
+    }
+  });
+
+  scrollTopBtn.addEventListener('click', function() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // Clear notifications
+  document.getElementById('clear-notifications').addEventListener('click', function() {
+    document.getElementById('notifications-list').innerHTML = '<p>No notifications available</p>';
+    document.querySelector('.notification-count').textContent = '0';
+    socket.emit('clear_notifications');
+  });
+
+  // Filter functionality
+  document.querySelector('.reset-filters').addEventListener('click', function() {
+    document.getElementById('status-filter').selectedIndex = 0;
+    document.getElementById('category-filter').selectedIndex = 0;
+    document.getElementById('amount-filter').selectedIndex = 0;
+    document.getElementById('start-date').value = '';
+    document.getElementById('end-date').value = '';
+    document.getElementById('search').value = '';
+    document.getElementById('sort-by').selectedIndex = 0;
+
+    // Re-fetch orders without filters
+    fetchOrdersData();
+  });
+
+  // Add event listeners to filter controls
+  document.getElementById('status-filter').addEventListener('change', applyFilters);
+  document.getElementById('category-filter').addEventListener('change', applyFilters);
+  document.getElementById('amount-filter').addEventListener('change', applyFilters);
+  document.getElementById('start-date').addEventListener('change', applyFilters);
+  document.getElementById('end-date').addEventListener('change', applyFilters);
+  document.getElementById('search').addEventListener('input', applyFilters);
+  document.getElementById('sort-by').addEventListener('change', applyFilters);
+
+  // Initialize charts and fetch data
+  fetchMetricsData();
+  fetchOrdersData();
+
+  // Function to fetch metrics data from APIs
+  function fetchMetricsData() {
+    // Array of API endpoints
+    const endpoints = [
+      '/api/revenue',
+      '/api/usercount',
+      '/api/productcount',
+      '/api/brandcount',
+      '/api/categorycount',
+      '/api/ordercount',
+      '/api/pending_orders'
     ];
 
-    // Dummy data for orders (for filtering and sorting)
-    const orders = [
-        { id: "#O001", customer: "John Doe", date: "2025-07-05", category: "electronics", amount: 150, status: "pending" },
-        { id: "#O002", customer: "Jane Smith", date: "2025-07-04", category: "tools", amount: 300, status: "shipped" },
-        { id: "#O003", customer: "Mike Johnson", date: "2025-07-03", category: "materials", amount: 450, status: "delivered" },
-        { id: "#O004", customer: "Emily Davis", date: "2025-07-02", category: "electronics", amount: 200, status: "pending" },
-        { id: "#O005", customer: "Chris Brown", date: "2025-07-01", category: "tools", amount: 120, status: "shipped" }
-    ];
+    // Fetch data from each endpoint
+    endpoints.forEach(endpoint => {
+      fetch(endpoint)
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            updateMetricDisplay(endpoint, data);
+          }
+        })
+        .catch(error => {
+          console.error(`Error fetching data from ${endpoint}:`, error);
+        });
+    });
+  }
 
-    // Dummy data for charts
-    const chartData = {
-        "total-orders": { labels: ["2025-07-01", "2025-07-02", "2025-07-03", "2025-07-04", "2025-07-05", "2025-07-06", "2025-07-07"], values: [150, 200, 180, 220, 190, 210, 230] },
-        "total-products": { labels: ["2025-07-01", "2025-07-02", "2025-07-03", "2025-07-04", "2025-07-05", "2025-07-06", "2025-07-07"], values: [50, 60, 55, 65, 62, 67, 75] },
-        "total-users": { labels: ["2025-07-01", "2025-07-02", "2025-07-03", "2025-07-04", "2025-07-05", "2025-07-06", "2025-07-07"], values: [2000, 2100, 2050, 2200, 2150, 2250, 2300] },
-        "total-categories": { labels: ["2025-07-01", "2025-07-02", "2025-07-03", "2025-07-04", "2025-07-05", "2025-07-06", "2025-07-07"], values: [40, 41, 42, 43, 44, 44, 45] },
-        "revenue": { labels: ["2025-07-01", "2025-07-02", "2025-07-03", "2025-07-04", "2025-07-05", "2025-07-06", "2025-07-07"], values: [8000, 8500, 8200, 9000, 8700, 9100, 9500] },
-        "pending-orders": { labels: ["2025-07-01", "2025-07-02", "2025-07-03", "2025-07-04", "2025-07-05", "2025-07-06", "2025-07-07"], values: [60, 65, 70, 75, 80, 85, 90] }
-    };
+  // Function to update metric display based on API response
+  function updateMetricDisplay(endpoint, data) {
+    let metricElement;
 
-    // Render metric charts
-    function renderMetricCharts() {
-        Object.keys(chartData).forEach(metric => {
-            const canvas = document.querySelector(`.metric-chart[data-metric="${metric}-chart"]`);
-            if (!canvas) {
-                console.error(`Error: .metric-chart for ${metric} not found`);
-                return;
-            }
-            const ctx = canvas.getContext("2d");
-            new Chart(ctx, {
-                type: "bar",
-                data: {
-                    labels: chartData[metric].labels,
-                    datasets: [{
-                        data: chartData[metric].values,
-                        backgroundColor: "rgba(242, 140, 40, 0.6)",
-                        borderColor: "rgba(242, 140, 40, 1)",
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { display: false },
-                        y: { display: false, beginAtZero: true }
-                    }
-                }
+    switch (endpoint) {
+      case '/api/revenue':
+        metricElement = document.querySelector('[data-metric="revenue"]');
+        if (metricElement) metricElement.textContent = `₦${data.amount || 0}`;
+        break;
+      case '/api/usercount':
+        metricElement = document.querySelector('[data-metric="total-users"]');
+        if (metricElement) metricElement.textContent = data.count || 0;
+        break;
+      case '/api/productcount':
+        metricElement = document.querySelector('[data-metric="total-products"]');
+        if (metricElement) metricElement.textContent = data.count || 0;
+        break;
+      case '/api/categorycount':
+        metricElement = document.querySelector('[data-metric="total-categories"]');
+        if (metricElement) metricElement.textContent = data.count || 0;
+        break;
+      case '/api/ordercount':
+        metricElement = document.querySelector('[data-metric="total-orders"]');
+        if (metricElement) metricElement.textContent = data.count || 0;
+        break;
+      case '/api/pending_orders':
+        metricElement = document.querySelector('[data-metric="pending-orders"]');
+        if (metricElement) metricElement.textContent = data.count || 0;
+        break;
+    }
+  }
+
+  // Function to fetch orders data
+  function fetchOrdersData() {
+    fetch('/api/orders')
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          processOrdersData(data.data);
+          updateOrdersTable(data.data);
+          initCharts(data.data);
+        }
+      })
+      .catch(error => {
+        console.error('Error fetching orders:', error);
+      });
+  }
+
+  // Function to process orders data for charts and tables
+  function processOrdersData(orders) {
+    // You can process the orders data here for additional functionality
+    console.log('Orders data processed:', orders.length, 'orders');
+  }
+
+  // Function to apply filters to orders table
+  function applyFilters() {
+    const statusFilter = Array.from(document.getElementById('status-filter').selectedOptions).map(opt => opt.value);
+    const categoryFilter = document.getElementById('category-filter').value;
+    const amountFilter = document.getElementById('amount-filter').value;
+    const startDate = document.getElementById('start-date').value;
+    const endDate = document.getElementById('end-date').value;
+    const searchQuery = document.getElementById('search').value.toLowerCase();
+    const sortBy = document.getElementById('sort-by').value;
+
+    // Fetch orders and then apply filters
+    fetch('/api/orders')
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          let filteredOrders = data.data;
+
+          // Apply status filter
+          if (!statusFilter.includes('all') && statusFilter.length > 0) {
+            filteredOrders = filteredOrders.filter(order => statusFilter.includes(order.status));
+          }
+
+          // Apply category filter
+          if (categoryFilter !== 'all') {
+            // This would need to be adjusted based on your actual data structure
+            filteredOrders = filteredOrders.filter(order => {
+              // Assuming each product has a category, we check if any product matches
+              return order.products.some(product =>
+                product.product.category === categoryFilter);
             });
-            gsap.from(canvas, {
-                opacity: 0,
-                y: 10,
-                duration: 0.5,
-                ease: "power3.out"
+          }
+
+          // Apply amount filter
+          if (amountFilter !== 'all') {
+            filteredOrders = filteredOrders.filter(order => {
+              const amount = parseFloat(order.totalPrice.$numberDecimal);
+              if (amountFilter === '0-100') return amount >= 0 && amount <= 100;
+              if (amountFilter === '100-500') return amount > 100 && amount <= 500;
+              if (amountFilter === '500+') return amount > 500;
+              return true;
             });
-        });
-    }
+          }
 
-    // Render main orders chart
-    function renderOrdersChart() {
-        const ctx = document.getElementById("ordersChart")?.getContext("2d");
-        if (!ctx) {
-            console.error("Error: #ordersChart canvas not found");
-            return;
-        }
+          // Apply date filter
+          if (startDate) {
+            filteredOrders = filteredOrders.filter(order => new Date(order.createdAt) >= new Date(startDate));
+          }
 
-        new Chart(ctx, {
-            type: "bar",
-            data: {
-                labels: chartData["total-orders"].labels,
-                datasets: [{
-                    label: "Orders Per Day",
-                    data: chartData["total-orders"].values,
-                    backgroundColor: "rgba(242, 140, 40, 0.6)",
-                    borderColor: "rgba(242, 140, 40, 1)",
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: "Number of Orders",
-                            font: { family: "Montserrat", size: 14 }
-                        }
-                    },
-                    x: {
-                        title: {
-                            display: true,
-                            text: "Date",
-                            font: { family: "Montserrat", size: 14 }
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        labels: {
-                            font: { family: "Montserrat" }
-                        }
-                    }
-                }
-            }
-        });
+          if (endDate) {
+            filteredOrders = filteredOrders.filter(order => new Date(order.createdAt) <= new Date(endDate));
+          }
 
-        gsap.from(".chart-container canvas", {
-            opacity: 0,
-            y: 20,
-            duration: 0.5,
-            ease: "power3.out"
-        });
-    }
+          // Apply search filter
+          if (searchQuery) {
+            filteredOrders = filteredOrders.filter(order =>
+              order._id.toLowerCase().includes(searchQuery) ||
+              order.customer.name.toLowerCase().includes(searchQuery)
+            );
+          }
 
-    // Render notifications modal
-    function renderNotifications() {
-        const modal = document.querySelector(".notifications-modal");
-        const content = document.querySelector(".notifications-content .notifications-body");
-        if (!modal || !content) {
-            console.error("Error: .notifications-modal or .notifications-body not found");
-            return;
-        }
+          // Apply sorting
+          filteredOrders.sort((a, b) => {
+            const [field, direction] = sortBy.split('-');
 
-        if (!notifications.length) {
-            console.warn("Warning: No notifications available");
-            content.innerHTML = "<p>No notifications available</p>";
-            return;
-        }
+            let valueA, valueB;
 
-        content.innerHTML = notifications.map(item => `
-            <p>${item.message} <span>(${item.date})</span></p>
-        `).join("");
-        modal.classList.add("active");
-        gsap.fromTo(".notifications-content",
-            { scale: 0.8, opacity: 0 },
-            { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.7)" }
-        );
-        trackEvent("modal_open", { modal_name: "notifications" });
-    }
-
-    // Validate settings form
-    function validateForm() {
-        const form = document.querySelector(".settings-form");
-        if (!form) {
-            console.error("Error: .settings-form not found");
-            return false;
-        }
-
-        let isValid = true;
-        const nameInput = form.querySelector("#name");
-        const emailInput = form.querySelector("#email");
-        const passwordInput = form.querySelector("#password");
-
-        form.querySelectorAll(".error-message").forEach(error => {
-            error.textContent = "";
-            error.classList.remove("active");
-        });
-        form.querySelectorAll("input").forEach(input => input.classList.remove("invalid"));
-
-        if (nameInput && nameInput.value.trim().length < 3) {
-            const error = nameInput.nextElementSibling;
-            if (error) {
-                error.textContent = "Full Name must be at least 3 characters";
-                error.classList.add("active");
-                nameInput.classList.add("invalid");
-            }
-            isValid = false;
-        }
-
-        if (emailInput && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput.value.trim())) {
-            const error = emailInput.nextElementSibling;
-            if (error) {
-                error.textContent = "Enter a valid email address";
-                error.classList.add("active");
-                emailInput.classList.add("invalid");
-            }
-            isValid = false;
-        }
-
-        if (passwordInput && passwordInput.value.trim() && passwordInput.value.length < 8) {
-            const error = passwordInput.nextElementSibling;
-            if (error) {
-                error.textContent = "Password must be at least 8 characters";
-                error.classList.add("active");
-                passwordInput.classList.add("invalid");
-            }
-            isValid = false;
-        }
-
-        return isValid;
-    }
-
-    // Update metrics (simulated)
-    function updateMetrics() {
-        const metrics = {
-            "total-orders": 1234,
-            "total-products": 567,
-            "total-users": 2890,
-            "total-categories": 45,
-            "revenue": 12345,
-            "pending-orders": 89
-        };
-
-        Object.keys(metrics).forEach(key => {
-            const element = document.querySelector(`[data-metric="${key}"]`);
-            if (element) {
-                const current = parseFloat(element.textContent.replace(/[^0-9.]/g, ""));
-                const increment = Math.floor(Math.random() * 10);
-                const newValue = key === "revenue" ? `$${current + increment}` : current + increment;
-                element.textContent = newValue;
-                gsap.from(element, {
-                    scale: 1.2,
-                    duration: 0.3,
-                    ease: "power2.out"
-                });
-            }
-        });
-    }
-
-    // Filter and sort orders
-    function filterAndSortOrders() {
-        const statusFilter = document.querySelector("#status-filter")?.selectedOptions || [];
-        const categoryFilter = document.querySelector("#category-filter")?.value || "all";
-        const amountFilter = document.querySelector("#amount-filter")?.value || "all";
-        const startDate = document.querySelector("#start-date")?.value || "";
-        const endDate = document.querySelector("#end-date")?.value || "";
-        const search = document.querySelector("#search")?.value.toLowerCase() || "";
-        const sortBy = document.querySelector("#sort-by")?.value || "id-asc";
-        const rows = document.querySelectorAll(".orders-table tbody tr");
-
-        if (!rows.length) {
-            console.error("Error: .orders-table tbody tr elements not found");
-            return;
-        }
-
-        let filteredOrders = [...orders];
-
-        // Apply filters
-        filteredOrders = filteredOrders.filter(order => {
-            let show = true;
-
-            // Status filter (multiple)
-            const selectedStatuses = Array.from(statusFilter).map(opt => opt.value);
-            if (selectedStatuses.length && !selectedStatuses.includes("all") && !selectedStatuses.includes(order.status)) {
-                show = false;
+            switch (field) {
+              case 'id':
+                valueA = a._id;
+                valueB = b._id;
+                break;
+              case 'date':
+                valueA = new Date(a.createdAt);
+                valueB = new Date(b.createdAt);
+                break;
+              case 'customer':
+                valueA = a.customer.name;
+                valueB = b.customer.name;
+                break;
+              case 'amount':
+                valueA = parseFloat(a.totalPrice.$numberDecimal);
+                valueB = parseFloat(b.totalPrice.$numberDecimal);
+                break;
+              default:
+                valueA = a._id;
+                valueB = b._id;
             }
 
-            // Category filter
-            if (categoryFilter !== "all" && order.category !== categoryFilter) {
-                show = false;
-            }
-
-            // Amount filter
-            if (amountFilter !== "all") {
-                if (amountFilter === "0-100" && (order.amount < 0 || order.amount > 100)) show = false;
-                if (amountFilter === "100-500" && (order.amount < 100 || order.amount > 500)) show = false;
-                if (amountFilter === "500+" && order.amount <= 500) show = false;
-            }
-
-            // Date range filter
-            if (startDate && order.date < startDate) show = false;
-            if (endDate && order.date > endDate) show = false;
-
-            // Search filter
-            if (search && !order.id.toLowerCase().includes(search) && !order.customer.toLowerCase().includes(search)) {
-                show = false;
-            }
-
-            return show;
-        });
-
-        // Sort orders
-        filteredOrders.sort((a, b) => {
-            const [field, direction] = sortBy.split("-");
-            let valueA = a[field], valueB = b[field];
-            if (field === "amount") {
-                valueA = parseFloat(valueA);
-                valueB = parseFloat(valueB);
-            }
-            if (direction === "asc") {
-                return valueA > valueB ? 1 : -1;
+            if (direction === 'asc') {
+              return valueA > valueB ? 1 : -1;
             } else {
-                return valueA < valueB ? 1 : -1;
+              return valueA < valueB ? 1 : -1;
             }
-        });
+          });
 
-        // Update table
-        const tbody = document.querySelector(".orders-table tbody");
-        if (tbody) {
-            tbody.innerHTML = filteredOrders.map(order => `
-                <tr data-status="${order.status}" data-date="${order.date}" data-category="${order.category}" data-amount="${order.amount}">
-                    <td>${order.id}</td>
-                    <td>${order.customer}</td>
-                    <td>${order.date}</td>
-                    <td>${order.category.charAt(0).toUpperCase() + order.category.slice(1)}</td>
-                    <td>$${order.amount}</td>
-                    <td class="status ${order.status}">${order.status.charAt(0).toUpperCase() + order.status.slice(1)}</td>
-                    <td><button class="view-order-btn" data-ga-event="view_order" data-ga-value="${order.id}">View</button></td>
-                </tr>
-            `).join("");
-
-            // Reattach view order button listeners
-            const viewOrderButtons = document.querySelectorAll(".view-order-btn");
-            viewOrderButtons.forEach(btn => {
-                btn.addEventListener("click", () => {
-                    const orderId = btn.dataset.gaValue;
-                    gsap.to(btn, {
-                        scale: 0.95,
-                        duration: 0.1,
-                        ease: "power2.in",
-                        onComplete: () => {
-                            gsap.to(btn, { scale: 1, duration: 0.1 });
-                            console.log(`View order ${orderId}`);
-                            trackEvent("view_order", { order_id: orderId });
-                            alert(`Viewing order ${orderId} (placeholder)`);
-                        }
-                    });
-                });
-            });
-
-            // Animate rows
-            gsap.from(".orders-table tbody tr", {
-                opacity: 0,
-                y: 10,
-                duration: 0.5,
-                stagger: 0.1,
-                ease: "power3.out"
-            });
+          updateOrdersTable(filteredOrders);
         }
-    }
+      })
+      .catch(error => {
+        console.error('Error fetching filtered orders:', error);
+      });
+  }
 
-    // Language selector logic
-    const languageToggle = document.querySelector(".language-toggle");
-    const languageOptions = document.querySelector(".language-options");
-    if (languageToggle && languageOptions) {
-        languageToggle.addEventListener("click", () => {
-            languageOptions.classList.toggle("active");
-            gsap.fromTo(".language-options li",
-                { opacity: 0, y: -10 },
-                { opacity: 1, y: 0, duration: 0.3, stagger: 0.1, ease: "power3.out" }
-            );
-            trackEvent("language_toggle");
-        });
+  // Function to update metrics
+  function updateMetrics(data) {
+    for (const [key, value] of Object.entries(data)) {
+      const element = document.querySelector(`[data-metric="${key}"]`);
+      if (element) {
+        // Animate the value change
+        const currentValue = parseInt(element.textContent.replace(/\D/g, ''));
+        const newValue = parseInt(value);
 
-        languageOptions.querySelectorAll("li").forEach(option => {
-            option.addEventListener("click", () => {
-                const lang = option.dataset.lang;
-                console.log(`Language selected: ${lang}`);
-                languageOptions.classList.remove("active");
-                gsap.to(".language-options", {
-                    opacity: 0,
-                    duration: 0.3,
-                    ease: "power3.in",
-                    onComplete: () => {
-                        alert(`Language changed to ${option.textContent} (placeholder)`);
-                        trackEvent("select_language", { language: lang });
-                    }
-                });
-            });
-        });
-    } else {
-        console.error("Error: .language-toggle or .language-options not found");
-    }
+        if (currentValue !== newValue) {
+          let start = currentValue;
+          const increment = newValue > currentValue ? 1 : -1;
+          const duration = 1000; // ms
+          const steps = 50;
+          const stepTime = duration / steps;
 
-    // Theme toggle
-    const themeToggleBtn = document.querySelector(".theme-toggle-btn");
-    if (themeToggleBtn) {
-        themeToggleBtn.addEventListener("click", () => {
-            document.body.classList.toggle("dark-mode");
-            const isDarkMode = document.body.classList.contains("dark-mode");
-            gsap.to("body", {
-                backgroundColor: isDarkMode ? "#1a1a1a" : "#e5e5e5",
-                duration: 0.5,
-                ease: "power2.out"
-            });
-            trackEvent("theme_toggle", { theme: isDarkMode ? "dark" : "light" });
-        });
-    } else {
-        console.error("Error: .theme-toggle-btn not found");
-    }
+          const timer = setInterval(() => {
+            start += increment;
+            element.textContent = key === 'revenue' ? `$${start}` : start.toLocaleString();
 
-    // Sidebar toggle
-    const menuToggle = document.querySelector(".menu-toggle");
-    const sidebar = document.querySelector(".sidebar");
-    if (menuToggle && sidebar) {
-        menuToggle.addEventListener("click", () => {
-            sidebar.classList.toggle("active");
-            gsap.to(sidebar, {
-                x: sidebar.classList.contains("active") ? 0 : -250,
-                duration: 0.3,
-                ease: "power3.out"
-            });
-            trackEvent("sidebar_toggle");
-        });
-    } else {
-        console.error("Error: .menu-toggle or .sidebar not found");
-    }
-
-    // Profile dropdown
-    const userProfile = document.querySelector(".user-profile");
-    if (userProfile) {
-        userProfile.addEventListener("click", () => {
-            userProfile.classList.toggle("active");
-            gsap.fromTo(".profile-dropdown li",
-                { opacity: 0, y: -10 },
-                { opacity: 1, y: 0, duration: 0.3, stagger: 0.1, ease: "power3.out" }
-            );
-            trackEvent("profile_toggle");
-        });
-    } else {
-        console.error("Error: .user-profile not found");
-    }
-
-    // Settings modal
-    const settingsBtn = document.querySelector(".settings-btn");
-    const settingsModal = document.querySelector(".settings-modal");
-    const closeSettingsBtn = document.querySelector(".close-settings");
-    const saveSettingsBtn = document.querySelector(".save-settings");
-    if (settingsBtn && settingsModal && closeSettingsBtn && saveSettingsBtn) {
-        settingsBtn.addEventListener("click", () => {
-            settingsModal.classList.add("active");
-            gsap.fromTo(".settings-content",
-                { scale: 0.8, opacity: 0 },
-                { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.7)" }
-            );
-            trackEvent("settings_open");
-        });
-
-        closeSettingsBtn.addEventListener("click", () => {
-            gsap.to(".settings-content", {
-                scale: 0.8,
-                opacity: 0,
-                duration: 0.3,
-                ease: "power2.in",
-                onComplete: () => {
-                    settingsModal.classList.remove("active");
-                    trackEvent("settings_close");
-                }
-            });
-        });
-
-        saveSettingsBtn.addEventListener("click", () => {
-            if (validateForm()) {
-                gsap.to(".settings-content", {
-                    scale: 0.8,
-                    opacity: 0,
-                    duration: 0.3,
-                    ease: "power2.in",
-                    onComplete: () => {
-                        settingsModal.classList.remove("active");
-                        console.log("Settings saved");
-                        alert("Settings saved (placeholder)");
-                        trackEvent("settings_save");
-                    }
-                });
+            if ((increment > 0 && start >= newValue) || (increment < 0 && start <= newValue)) {
+              element.textContent = key === 'revenue' ? `$${newValue}` : newValue.toLocaleString();
+              clearInterval(timer);
             }
-        });
-    } else {
-        console.error("Error: Settings modal elements not found");
+          }, stepTime);
+        }
+      }
+    }
+  }
+
+  // Function to update orders table
+  function updateOrdersTable(orders) {
+    const tableBody = document.getElementById('orders-table-body');
+    tableBody.innerHTML = '';
+
+    if (orders.length === 0) {
+      tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No orders found</td></tr>';
+      return;
     }
 
-    // Notifications modal
-    const notificationBtn = document.querySelector(".notification-btn");
-    const notificationsModal = document.querySelector(".notifications-modal");
-    const closeNotificationsBtn = document.querySelector(".close-notifications");
-    const clearNotificationsBtn = document.querySelector(".clear-notifications");
-    if (notificationBtn && notificationsModal && closeNotificationsBtn && clearNotificationsBtn) {
-        notificationBtn.addEventListener("click", () => {
-            renderNotifications();
-        });
+    orders.forEach(order => {
+      const row = document.createElement('tr');
+      row.setAttribute('data-status', order.status);
+      row.setAttribute('data-date', order.createdAt);
+      row.setAttribute('data-category', 'tools'); // Default category, adjust based on your data
+      row.setAttribute('data-amount', parseFloat(order.totalPrice.$numberDecimal));
 
-        closeNotificationsBtn.addEventListener("click", () => {
-            gsap.to(".notifications-content", {
-                scale: 0.8,
-                opacity: 0,
-                duration: 0.3,
-                ease: "power2.in",
-                onComplete: () => {
-                    notificationsModal.classList.remove("active");
-                    trackEvent("notifications_close");
-                }
-            });
-        });
+      // Determine the primary category from products
+      let category = 'Tools';
+      if (order.products && order.products.length > 0) {
+        // This is a simplified approach - adjust based on your actual product data structure
+        if (order.products.some(p => p.product.name.toLowerCase().includes('laser'))) {
+          category = 'Electronics';
+        } else if (order.products.some(p => p.product.name.toLowerCase().includes('drill'))) {
+          category = 'Tools';
+        }
+      }
 
-        clearNotificationsBtn.addEventListener("click", () => {
-            const content = document.querySelector(".notifications-content .notifications-body");
-            if (content) {
-                content.innerHTML = "<p>No notifications available</p>";
-                notifications.length = 0; // Clear notifications array
-                gsap.from(".notifications-body", {
-                    opacity: 0,
-                    duration: 0.3,
-                    ease: "power3.out"
-                });
-                trackEvent("notifications_clear");
-            }
-        });
-    } else {
-        console.error("Error: Notifications modal elements not found");
+      row.innerHTML = `
+                <td>${order.payment.reference}</td>
+                <td>${order.customer.name}</td>
+                <td>${new Date(order.createdAt).toLocaleDateString()}</td>
+                <td>${category}</td>
+                <td>₦${parseFloat(order.totalPrice.$numberDecimal).toLocaleString()}</td>
+                <td class="status ${order.status}">${order.status.charAt(0).toUpperCase() + order.status.slice(1)}</td>
+                <td><button class="view-order-btn" data-order-id="${order._id}">View</button></td>
+            `;
+
+      tableBody.appendChild(row);
+    });
+
+    // Add event listeners to view buttons
+    document.querySelectorAll('.view-order-btn').forEach(button => {
+      button.addEventListener('click', function() {
+        const orderId = this.getAttribute('data-order-id');
+        window.location.href = `/admin/order_details?id=${orderId}`;
+      });
+    });
+  }
+
+  // Function to add notification
+  function addNotification(notification) {
+    const notificationsList = document.getElementById('notifications-list');
+    const notificationCount = document.querySelector('.notification-count');
+
+    // Clear "no notifications" message if it exists
+    if (notificationsList.innerHTML.includes('No notifications available')) {
+      notificationsList.innerHTML = '';
     }
 
-    // Scroll to top
-    const scrollTopBtn = document.querySelector(".scroll-top-btn");
-    if (scrollTopBtn) {
-        ScrollTrigger.create({
-            trigger: ".admin-content",
-            start: "top top",
-            onEnterBack: () => {
-                gsap.to(scrollTopBtn, { opacity: 1, duration: 0.3, display: "block" });
+    // Create notification element
+    const notificationElement = document.createElement('div');
+    notificationElement.classList.add('notification-item');
+    notificationElement.innerHTML = `
+            <p>${notification.message}</p>
+            <span>${new Date(notification.date).toLocaleString()}</span>
+        `;
+
+    // Add to top of list
+    if (notificationsList.firstChild) {
+      notificationsList.insertBefore(notificationElement, notificationsList.firstChild);
+    } else {
+      notificationsList.appendChild(notificationElement);
+    }
+
+    // Update notification count
+    const currentCount = parseInt(notificationCount.textContent);
+    notificationCount.textContent = currentCount + 1;
+  }
+
+  // Function to update chat notification
+  function updateChatNotification(data) {
+    const chatNotification = document.querySelector('.sidebar-item:nth-child(8) .unread-count');
+    if (chatNotification) {
+      chatNotification.textContent = data.count;
+    }
+  }
+
+  // Initialize charts with order data
+  function initCharts(orders) {
+    // Process orders for the chart data
+    const ordersByDate = processOrdersForChart(orders);
+
+    // Orders per day chart
+    const ordersCtx = document.getElementById('ordersChart').getContext('2d');
+    new Chart(ordersCtx, {
+      type: 'line',
+      data: {
+        labels: ordersByDate.labels,
+        datasets: [{
+          label: 'Orders',
+          data: ordersByDate.values,
+          backgroundColor: 'rgba(242, 140, 40, 0.2)',
+          borderColor: 'rgba(242, 140, 40, 1)',
+          borderWidth: 2,
+          tension: 0.4,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: {
+              drawBorder: false
             },
-            onLeave: () => {
-                gsap.to(scrollTopBtn, { opacity: 0, duration: 0.3, display: "none" });
+            title: {
+              display: true,
+              text: 'Number of Orders'
             }
-        });
-
-        scrollTopBtn.addEventListener("click", () => {
-            window.scrollTo({ top: 0, behavior: "smooth" });
-            trackEvent("scroll_top");
-        });
-    } else {
-        console.error("Error: .scroll-top-btn not found");
-    }
-
-    // Newsletter subscription
-    const newsletterBtn = document.querySelector(".footer-newsletter button");
-    if (newsletterBtn) {
-        newsletterBtn.addEventListener("click", () => {
-            const emailInput = document.querySelector(".footer-newsletter input");
-            if (emailInput && emailInput.value.trim()) {
-                console.log(`Subscribed with email: ${emailInput.value}`);
-                alert("Subscribed to newsletter (placeholder)");
-                emailInput.value = "";
-                trackEvent("newsletter_subscribe", { email: emailInput.value });
-            } else {
-                console.warn("Error: Newsletter email input is empty or not found");
-                alert("Please enter a valid email address");
+          },
+          x: {
+            grid: {
+              display: false
+            },
+            title: {
+              display: true,
+              text: 'Date'
             }
-        });
-    } else {
-        console.error("Error: .footer-newsletter button not found");
-    }
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          }
+        }
+      }
+    });
 
-    // Footer year
-    const yearElement = document.querySelector(".footer-bottom .year");
-    if (yearElement) {
-        yearElement.textContent = new Date().getFullYear();
-    } else {
-        console.error("Error: .footer-bottom .year not found");
-    }
+    // Mini charts for metrics
+    document.querySelectorAll('.metric-chart').forEach(canvas => {
+      const ctx = canvas.getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['', '', '', '', '', ''],
+          datasets: [{
+            data: [12, 14, 10, 16, 13, 15],
+            borderColor: 'rgba(242, 140, 40, 1)',
+            borderWidth: 2,
+            tension: 0.4,
+            fill: false,
+            pointRadius: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              display: false
+            },
+            x: {
+              display: false
+            }
+          },
+          plugins: {
+            legend: {
+              display: false
+            }
+          }
+        }
+      });
+    });
+  }
 
-    // Animate overview cards
-    const cards = document.querySelectorAll(".dashboard-card");
-    if (cards.length) {
-        gsap.from(cards, {
-            opacity: 0,
-            y: 20,
-            duration: 0.5,
-            stagger: 0.1,
-            ease: "power3.out"
-        });
-    } else {
-        console.error("Error: .dashboard-card elements not found");
-    }
+  // Process orders data for the chart
+  function processOrdersForChart(orders) {
+    // Group orders by date
+    const ordersByDate = {};
 
-    // Animate filter controls
-    const filterControls = document.querySelectorAll(".filters .filter-group, .filters .reset-filters");
-    if (filterControls.length) {
-        gsap.from(filterControls, {
-            opacity: 0,
-            y: 10,
-            duration: 0.5,
-            stagger: 0.1,
-            ease: "power3.out"
-        });
-    } else {
-        console.error("Error: Filter controls not found");
-    }
+    orders.forEach(order => {
+      const date = new Date(order.createdAt).toLocaleDateString();
+      if (!ordersByDate[date]) {
+        ordersByDate[date] = 0;
+      }
+      ordersByDate[date]++;
+    });
 
-    // Action buttons
-    const actionButtons = document.querySelectorAll(".action-btn");
-    if (actionButtons.length) {
-        actionButtons.forEach(btn => {
-            btn.addEventListener("click", () => {
-                const action = btn.dataset.gaValue;
-                gsap.to(btn, {
-                    scale: 0.95,
-                    duration: 0.1,
-                    ease: "power2.in",
-                    onComplete: () => {
-                        gsap.to(btn, { scale: 1, duration: 0.1 });
-                        trackEvent("quick_action", { action_name: action });
-                    }
-                });
-            });
-        });
-    } else {
-        console.error("Error: .action-btn elements not found");
-    }
+    // Sort dates and get the last 7 days
+    const dates = Object.keys(ordersByDate).sort((a, b) => new Date(a) - new Date(b));
+    const recentDates = dates.slice(-7);
 
-    // Filter and sort controls
-    const statusFilter = document.querySelector("#status-filter");
-    const categoryFilter = document.querySelector("#category-filter");
-    const amountFilter = document.querySelector("#amount-filter");
-    const startDate = document.querySelector("#start-date");
-    const endDate = document.querySelector("#end-date");
-    const searchInput = document.querySelector("#search");
-    const sortBy = document.querySelector("#sort-by");
-    const resetFilters = document.querySelector(".reset-filters");
+    // Prepare data for the chart
+    const labels = recentDates;
+    const values = recentDates.map(date => ordersByDate[date]);
 
-    if (statusFilter) {
-        statusFilter.addEventListener("change", () => {
-            filterAndSortOrders();
-            trackEvent("filter_status", { selected: Array.from(statusFilter.selectedOptions).map(opt => opt.value).join(",") });
-        });
-    } else {
-        console.error("Error: #status-filter not found");
-    }
-
-    if (categoryFilter) {
-        categoryFilter.addEventListener("change", () => {
-            filterAndSortOrders();
-            trackEvent("filter_category", { category: categoryFilter.value });
-        });
-    } else {
-        console.error("Error: #category-filter not found");
-    }
-
-    if (amountFilter) {
-        amountFilter.addEventListener("change", () => {
-            filterAndSortOrders();
-            trackEvent("filter_amount", { range: amountFilter.value });
-        });
-    } else {
-        console.error("Error: #amount-filter not found");
-    }
-
-    if (startDate) {
-        startDate.addEventListener("change", () => {
-            filterAndSortOrders();
-            trackEvent("filter_date_start", { date: startDate.value });
-        });
-    } else {
-        console.error("Error: #start-date not found");
-    }
-
-    if (endDate) {
-        endDate.addEventListener("change", () => {
-            filterAndSortOrders();
-            trackEvent("filter_date_end", { date: endDate.value });
-        });
-    } else {
-        console.error("Error: #end-date not found");
-    }
-
-    if (searchInput) {
-        searchInput.addEventListener("input", () => {
-            filterAndSortOrders();
-            trackEvent("filter_search", { query: searchInput.value });
-        });
-    } else {
-        console.error("Error: #search not found");
-    }
-
-    if (sortBy) {
-        sortBy.addEventListener("change", () => {
-            filterAndSortOrders();
-            trackEvent("filter_sort", { sort: sortBy.value });
-        });
-    } else {
-        console.error("Error: #sort-by not found");
-    }
-
-    if (resetFilters) {
-        resetFilters.addEventListener("click", () => {
-            if (statusFilter) statusFilter.selectedIndex = 0;
-            if (categoryFilter) categoryFilter.value = "all";
-            if (amountFilter) amountFilter.value = "all";
-            if (startDate) startDate.value = "";
-            if (endDate) endDate.value = "";
-            if (searchInput) searchInput.value = "";
-            if (sortBy) sortBy.value = "id-asc";
-            filterAndSortOrders();
-            gsap.from(".filters", {
-                opacity: 0,
-                duration: 0.3,
-                ease: "power3.out"
-            });
-            trackEvent("reset_filters");
-        });
-    } else {
-        console.error("Error: .reset-filters not found");
-    }
-
-    // Initialize charts and filters
-    renderMetricCharts();
-    renderOrdersChart();
-    filterAndSortOrders();
+    return { labels, values };
+  }
 });

@@ -21,6 +21,14 @@ export const fetchCurrentUser = async () => {
   }
 };
 
+export const updateCartView = () => {
+  const cart = JSON.parse(localStorage.getItem('cart')) || [];
+  const cartContainer = document.querySelector(".cart-count")
+  if (cartContainer) {
+    const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+    cartContainer.textContent = totalItems;
+  }
+}
 export const updateHeaderView = async () => {
 
   try {
@@ -33,6 +41,7 @@ export const updateHeaderView = async () => {
 `;
       authlinks.innerHTML = html
     }
+    updateCartView();
 
   } catch (err) {
     console.log(err)
