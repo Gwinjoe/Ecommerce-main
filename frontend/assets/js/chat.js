@@ -2,7 +2,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { inlineLoadingIndicator } from "./loader.js"
 
-const socket = io();
+const socket = io("/chat");
 
 gsap.registerPlugin(ScrollTrigger);
 

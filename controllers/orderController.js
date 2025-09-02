@@ -8,13 +8,16 @@ exports.revenue = async (req, res) => {
     const orders = await Orders.find({ status: 'delivered' });
     console.log(orders)
     let totalRevenue = 0;
-
-    orders.forEach(order => {
-      const orderTotal = parseFloat(order.totalPrice.$numberDecimal);
-      console.log(orderTotal)
+    if (orders.length) {
+      orders.forEach(order => {
+        const orderTotal = parseFloat(order.totalPrice);
+        totalRevenue += orderTotal;
+        console.log(totalRevenue)
+      });
+    } else {
+      const orderTotal = parseFloat(orders.totalPrice);
       totalRevenue += orderTotal;
-      console.log(totalRevenue)
-    });
+    }
     console.log("totalRevenue - " + totalRevenue)
     res.status(200).json({ success: true, amount: totalRevenue })
   } catch (error) {
