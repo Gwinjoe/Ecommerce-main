@@ -3,7 +3,7 @@ const Users = require('../models/userModel');
 const Products = require('../models/productSchema');
 const Categories = require('../models/categorySchema');
 
-module.exports = function(io) {
+module.exports = (io) => {
   const adminNamespace = io.of('/admin_dashboard');
 
   adminNamespace.use((socket, next) => {

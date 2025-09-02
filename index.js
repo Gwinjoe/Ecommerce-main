@@ -39,7 +39,7 @@ require("./config/cloudinary");
 require("./config/passport");
 app.use(passport.initialize());
 app.use(passport.session());
-clearUploads()
+
 //logging the current user / session to ascertain current user
 //app.use((req, res, next) => {
 //  console.log(req.session);

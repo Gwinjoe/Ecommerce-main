@@ -1,10 +1,9 @@
 //const { enterAllRooms, buildMsg } = require("./chatSocketUtils");
 const Users = require("../models/userModel");
 const Chats = require("../models/chatSchema");
-
 const realtimechats = Chats.watch();
 
-module.exports = function(io) {
+module.exports = (io) => {
   const chatNamespace = io.of('/chat');
 
   chatNamespace.use((socket, next) => {
