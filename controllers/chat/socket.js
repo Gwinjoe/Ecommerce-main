@@ -41,9 +41,7 @@ module.exports = function(server, sessionMiddleware) {
     }
 
     const data = await unreadMessages();
-    io.emit("chat_notification", data)
-    console.log("data = " + data)
-    console.log(user.name + " connected")
+    socket.emit("chat_notification", data)
 
     socket.on("getChatThreads", async () => {
       try {
@@ -149,7 +147,6 @@ module.exports = function(server, sessionMiddleware) {
       const unreadMessages = await unreadMessages()
       io.to(existingChat.id).emit("newNotification", { userUnreadMessages: existingChat.userUnreadMessages, supportUnreadMessages: existingChat.supportUnreadMessages, id: existingChat.id })
       io.emit("chat_notification", unreadMessages)
-      console.log(unreadMessages)
     })
     socket.on('disconnect', () => {
       console.log(`${user.name} disconnected`);

@@ -1,7 +1,7 @@
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { inlineLoadingIndicator } from "./loader.js";
-
+import { updateHeader } from "./user-details.js";
 
 const socket = io();
 
@@ -31,6 +31,7 @@ async function getChatThreads() {
 
 window.addEventListener("DOMContentLoaded", async () => {
   socket.emit("getChatThreads")
+  updateHeader()
 })
 
 const chats2 = [

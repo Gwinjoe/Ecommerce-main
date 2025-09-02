@@ -20,6 +20,7 @@ const MongoStore = require("connect-mongo");
 const sessionStore = MongoStore.create({ mongoUrl: DATABASE_URI, collectionName: "sessions" });
 connectDB(DATABASE_URI);
 
+clearUploads()
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cors());
