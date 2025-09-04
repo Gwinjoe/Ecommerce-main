@@ -1,9 +1,4 @@
-
 import { updateHeaderView } from "./user-details.js";
-
-/**
- * Homepage script — server-driven, paginated product loading
- */
 
 const elements = {
   categoryGrid: document.getElementById('categoriesGrid'),
@@ -15,14 +10,15 @@ const elements = {
   cartCount: document.querySelector('.cart-count'),
   activeFilterBadge: document.getElementById('activeFilterBadge'),
   searchInput: document.getElementById('searchInput'),
-  dropdownSelected: document.querySelector('.dropdown-selected')
+  dropdownSelected: document.querySelector('.dropdown-selected'),
 };
 
+/* ------------------------- state ------------------------- */
 let currency = "NGN";
 let allCategories = [];
 let allBrands = [];
 
-// Server-driven product state (we fetch pages rather than full list)
+// Server-driven product state
 const state = {
   products: [],            // accumulated products for current filter (may be multiple pages)
   currentPage: 0,          // last fetched page for current filter
@@ -54,7 +50,6 @@ const parseDecimal = (v) => {
 
 const formatCurrency = (value) => {
   const num = parseDecimal(value);
-  // using Intl with NGN — caller previously replaced 'NGN' with '₦', keep similar
   return new Intl.NumberFormat('en-NG', {
     style: 'currency',
     currency: currency,
@@ -64,26 +59,32 @@ const formatCurrency = (value) => {
 
 async function fetchJson(endpoint, { showSpinner = false } = {}) {
   try {
-    if (showSpinner) elements.productGrid.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+    if (showSpinner && elements.productGrid) {
+      elements.productGrid.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+    }
     const res = await fetch(endpoint);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json(); // { success, data, meta }
   } catch (err) {
-    console.error('fetchJson error', err);
+    console.error('fetchJson error', err, endpoint);
     return { success: false, data: [], meta: {} };
-  } finally {
-    if (showSpinner) {
-      // leave grid empty or previous content; we don't force clearing here
-    }
   }
 }
 
-/* ------------------------- rendering ------------------------- */
+function escapeHtml(str = '') {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+/* ------------------------- rendering helpers ------------------------- */
 
 function createProductCard(product) {
   const price = product.price;
   const formattedPrice = formatCurrency(price);
-
   const rating = parseDecimal(product.ratings) || 0;
 
   return `
@@ -100,8 +101,7 @@ function createProductCard(product) {
 }
 
 function createSwiperSlide(product) {
-  const price = product.price;
-  const formattedPrice = formatCurrency(price);
+  const formattedPrice = formatCurrency(product.price);
   const rating = parseDecimal(product.ratings) || 0;
 
   return `
@@ -118,8 +118,7 @@ function createSwiperSlide(product) {
 }
 
 function createRecentSlide(product) {
-  const price = product.price;
-  const formattedPrice = formatCurrency(price);
+  const formattedPrice = formatCurrency(product.price);
   const rating = parseDecimal(product.ratings) || 0;
 
   return `
@@ -137,90 +136,82 @@ function createRecentSlide(product) {
   `;
 }
 
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
 /* ------------------------- categories & brands ------------------------- */
 
 function renderCategories() {
-  if (!elements.categoryGrid || !elements.categoryDropdown) return;
-  elements.categoryGrid.innerHTML = '';
-  elements.categoryDropdown.innerHTML = '';
+  try {
+    if (!elements.categoryGrid || !elements.categoryDropdown) return;
+    elements.categoryGrid.innerHTML = '';
+    elements.categoryDropdown.innerHTML = '';
 
-  // All option (grid)
-  const allGridOption = document.createElement('div');
-  allGridOption.className = 'cat-box active';
-  allGridOption.dataset.filter = 'all';
-  allGridOption.textContent = 'All';
-  elements.categoryGrid.appendChild(allGridOption);
+    const allGridOption = document.createElement('div');
+    allGridOption.className = 'cat-box active';
+    allGridOption.dataset.filter = 'all';
+    allGridOption.textContent = 'All';
+    elements.categoryGrid.appendChild(allGridOption);
 
-  // All option dropdown
-  const allDropdownOption = document.createElement('li');
-  allDropdownOption.dataset.value = 'all';
-  allDropdownOption.textContent = 'All Categories';
-  elements.categoryDropdown.appendChild(allDropdownOption);
+    const allDropdownOption = document.createElement('li');
+    allDropdownOption.dataset.value = 'all';
+    allDropdownOption.textContent = 'All Categories';
+    elements.categoryDropdown.appendChild(allDropdownOption);
 
-  allCategories.forEach(category => {
-    const gridItem = document.createElement('div');
-    gridItem.className = 'cat-box';
-    gridItem.dataset.filter = category._id;
-    gridItem.textContent = category.name;
-    elements.categoryGrid.appendChild(gridItem);
+    allCategories.forEach(category => {
+      const gridItem = document.createElement('div');
+      gridItem.className = 'cat-box';
+      gridItem.dataset.filter = category._id;
+      gridItem.textContent = category.name;
+      elements.categoryGrid.appendChild(gridItem);
 
-    const dropdownItem = document.createElement('li');
-    dropdownItem.dataset.value = category._id;
-    dropdownItem.textContent = category.name;
-    elements.categoryDropdown.appendChild(dropdownItem);
-  });
+      const dropdownItem = document.createElement('li');
+      dropdownItem.dataset.value = category._id;
+      dropdownItem.textContent = category.name;
+      elements.categoryDropdown.appendChild(dropdownItem);
+    });
+  } catch (err) {
+    console.error('renderCategories error', err);
+  }
 }
 
 function renderBrandFeature(products) {
-  if (!elements.brandSwiperWrapper) return;
-  elements.brandSwiperWrapper.innerHTML = '';
-  const brandName = document.querySelector('.brand-name')?.textContent || '';
+  try {
+    if (!elements.brandSwiperWrapper) return;
+    elements.brandSwiperWrapper.innerHTML = '';
+    const brandName = document.querySelector('.brand-name')?.textContent || '';
 
-  // Attempt to find the brand by name; fallback to top brands slice
-  let brandProducts = [];
-  const foundBrand = allBrands.find(b => (brandName && b.name && b.name.includes(brandName.trim())));
+    let brandProducts = [];
+    const foundBrand = allBrands.find(b => (brandName && b.name && b.name.includes(brandName.trim())));
 
-  if (foundBrand) {
-    brandProducts = products.filter(p => p.brand?._id === foundBrand._id).slice(0, 3);
+    if (foundBrand) {
+      brandProducts = (products || []).filter(p => p.brand?._id === foundBrand._id).slice(0, 3);
+    }
+    if (!brandProducts.length) {
+      brandProducts = (products || []).slice(0, 3);
+    }
+
+    brandProducts.forEach(p => elements.brandSwiperWrapper.innerHTML += createSwiperSlide(p));
+
+    if (state.brandSwiper && typeof state.brandSwiper.destroy === 'function') state.brandSwiper.destroy(true, true);
+    initBrandSwiper();
+  } catch (err) {
+    console.error('renderBrandFeature error', err);
   }
-  if (!brandProducts.length) {
-    brandProducts = products.slice(0, 3);
-  }
-
-  brandProducts.forEach(p => elements.brandSwiperWrapper.innerHTML += createSwiperSlide(p));
-
-  // init or restart swiper
-  if (state.brandSwiper && typeof state.brandSwiper.destroy === 'function') state.brandSwiper.destroy(true, true);
-  initBrandSwiper();
 }
 
 function renderRecentProducts(products) {
-  if (!elements.recentSwiperWrapper) return;
-  elements.recentSwiperWrapper.innerHTML = '';
-
-  // We assume 'products' are sorted newest-first from server (default)
-  const recentProducts = (products || []).slice(0, 12);
-
-  recentProducts.forEach(p => elements.recentSwiperWrapper.innerHTML += createRecentSlide(p));
-
-  if (state.recentSwiper && typeof state.recentSwiper.destroy === 'function') state.recentSwiper.destroy(true, true);
-  initRecentSwiper();
+  try {
+    if (!elements.recentSwiperWrapper) return;
+    elements.recentSwiperWrapper.innerHTML = '';
+    const recentProducts = (products || []).slice(0, 12);
+    recentProducts.forEach(p => elements.recentSwiperWrapper.innerHTML += createRecentSlide(p));
+    if (state.recentSwiper && typeof state.recentSwiper.destroy === 'function') state.recentSwiper.destroy(true, true);
+    initRecentSwiper();
+  } catch (err) {
+    console.error('renderRecentProducts error', err);
+  }
 }
 
 /* ------------------------- product fetching & rendering ------------------------- */
 
-/**
- * Build query string from state
- */
 function buildProductQuery({ page = 1, perPage = state.perPage } = {}) {
   const params = new URLSearchParams();
   params.set('page', page);
@@ -231,103 +222,103 @@ function buildProductQuery({ page = 1, perPage = state.perPage } = {}) {
   return params.toString();
 }
 
-/**
- * Fetch the next page of products for the current filter and append to state.products
- */
 async function fetchNextProductsPage() {
-  const nextPage = state.currentPage + 1;
-  if (nextPage > state.totalPages) return false;
+  try {
+    const nextPage = state.currentPage + 1;
+    if (nextPage > state.totalPages) return false;
 
-  const q = buildProductQuery({ page: nextPage });
-  const resp = await fetchJson(`/api/products?${q}`, { showSpinner: false });
-  if (!resp.success) return false;
+    const q = buildProductQuery({ page: nextPage });
+    const resp = await fetchJson(`/api/products?${q}`, { showSpinner: false });
+    if (!resp.success) return false;
 
-  const pageItems = Array.isArray(resp.data) ? resp.data : [];
-  state.products = state.products.concat(pageItems);
-  state.currentPage = resp.meta?.page ?? nextPage;
-  state.totalProducts = resp.meta?.total ?? state.totalProducts;
-  state.totalPages = resp.meta?.pages ?? state.totalPages;
-  return pageItems.length > 0;
+    const pageItems = Array.isArray(resp.data) ? resp.data : [];
+    state.products = state.products.concat(pageItems);
+    state.currentPage = resp.meta?.page ?? nextPage;
+    state.totalProducts = resp.meta?.total ?? state.totalProducts;
+    state.totalPages = resp.meta?.pages ?? state.totalPages;
+    return pageItems.length > 0;
+  } catch (err) {
+    console.error('fetchNextProductsPage error', err);
+    return false;
+  }
 }
 
-/**
- * Load first page (or fresh page when filters/search changes)
- */
 async function loadFirstProductsPage() {
-  const q = buildProductQuery({ page: 1 });
-  const resp = await fetchJson(`/api/products?${q}`, { showSpinner: true });
-  if (!resp.success) {
+  try {
+    const q = buildProductQuery({ page: 1 });
+    const resp = await fetchJson(`/api/products?${q}`, { showSpinner: true });
+    if (!resp.success) {
+      state.products = [];
+      state.currentPage = 0;
+      state.totalProducts = 0;
+      state.totalPages = 1;
+      renderProducts();
+      return;
+    }
+
+    state.products = Array.isArray(resp.data) ? resp.data : [];
+    state.currentPage = resp.meta?.page ?? 1;
+    state.totalProducts = resp.meta?.total ?? state.products.length;
+    state.totalPages = resp.meta?.pages ?? Math.max(1, Math.ceil(state.totalProducts / state.perPage));
+  } catch (err) {
+    console.error('loadFirstProductsPage error', err);
     state.products = [];
     state.currentPage = 0;
     state.totalProducts = 0;
     state.totalPages = 1;
-    renderProducts(); // will show no products
-    return;
   }
-
-  state.products = Array.isArray(resp.data) ? resp.data : [];
-  state.currentPage = resp.meta?.page ?? 1;
-  state.totalProducts = resp.meta?.total ?? state.products.length;
-  state.totalPages = resp.meta?.pages ?? Math.max(1, Math.ceil(state.totalProducts / state.perPage));
 }
 
-/**
- * Render products area using accumulated state.products and visibleProducts
- */
 function renderProducts() {
-  if (!elements.productGrid) return;
-  elements.productGrid.innerHTML = '';
+  try {
+    if (!elements.productGrid) return;
+    elements.productGrid.innerHTML = '';
 
-  if (!state.products || state.products.length === 0) {
-    elements.productGrid.innerHTML = `
-      <div class="no-products">
-        <i class="fas fa-tools"></i>
-        <p>No products found</p>
-      </div>`;
-    elements.loadMoreBtn && (elements.loadMoreBtn.style.display = 'none');
-    return;
+    if (!state.products || state.products.length === 0) {
+      elements.productGrid.innerHTML = `
+        <div class="no-products">
+          <i class="fas fa-tools"></i>
+          <p>No products found</p>
+        </div>`;
+      elements.loadMoreBtn && (elements.loadMoreBtn.style.display = 'none');
+      return;
+    }
+
+    const productsToShow = state.products.slice(0, state.visibleProducts);
+    elements.productGrid.innerHTML = productsToShow.map(p => createProductCard(p)).join('');
+
+    if (state.visibleProducts < Math.min(state.totalProducts, state.products.length) || state.currentPage < state.totalPages) {
+      elements.loadMoreBtn && (elements.loadMoreBtn.style.display = 'block');
+    } else {
+      elements.loadMoreBtn && (elements.loadMoreBtn.style.display = 'none');
+    }
+
+    if (state.activeCategory && state.activeCategory !== 'all') {
+      const cat = allCategories.find(c => c._id === state.activeCategory);
+      elements.activeFilterBadge && (elements.activeFilterBadge.textContent = cat?.name || '');
+    } else {
+      elements.activeFilterBadge && (elements.activeFilterBadge.textContent = '');
+    }
+
+    animateProductCards();
+  } catch (err) {
+    console.error('renderProducts error', err);
   }
-
-  // if a search was performed we might want to use filtered subset — but server already filtered
-  const productsToShow = state.products.slice(0, state.visibleProducts);
-
-  elements.productGrid.innerHTML = productsToShow.map(p => createProductCard(p)).join('');
-
-  // show/hide load more —load more will fetch next server page if necessary
-  if (state.visibleProducts < Math.min(state.totalProducts, state.products.length) || state.currentPage < state.totalPages) {
-    elements.loadMoreBtn && (elements.loadMoreBtn.style.display = 'block');
-  } else {
-    elements.loadMoreBtn && (elements.loadMoreBtn.style.display = 'none');
-  }
-
-  // Update activeFilterBadge (category)
-  if (state.activeCategory && state.activeCategory !== 'all') {
-    const cat = allCategories.find(c => c._id === state.activeCategory);
-    elements.activeFilterBadge && (elements.activeFilterBadge.textContent = cat?.name || '');
-  } else {
-    elements.activeFilterBadge && (elements.activeFilterBadge.textContent = '');
-  }
-
-  animateProductCards();
 }
 
 /* ------------------------- events ------------------------- */
 
 function initEventListeners() {
-  // Load more logic: when clicked, show more or fetch next page then show
+  // Load more
   elements.loadMoreBtn?.addEventListener('click', async () => {
-    state.visibleProducts += state.perPage; // show more cards locally
-
-    // If visibleProducts exceeds currently fetched products and server has more pages, fetch next
+    state.visibleProducts += state.perPage;
     if (state.visibleProducts > state.products.length && state.currentPage < state.totalPages) {
       await fetchNextProductsPage();
     }
-
     renderProducts();
   });
 
-  // Category filtering (grid boxes)
-  // dynamic binding: delegate clicks on categoryGrid
+  // Category grid (delegation)
   elements.categoryGrid?.addEventListener('click', async (e) => {
     const box = e.target.closest('.cat-box');
     if (!box) return;
@@ -336,21 +327,17 @@ function initEventListeners() {
 
     state.activeCategory = newCat;
     state.visibleProducts = state.perPage;
-    // update active class
     document.querySelectorAll('.cat-box').forEach(b => b.classList.remove('active'));
     box.classList.add('active');
     elements.dropdownSelected && (elements.dropdownSelected.textContent = box.textContent);
 
-    // fetch fresh page from server for this category
     await loadFirstProductsPage();
     renderProducts();
-
-    // update brand feature / recent with new data
     renderBrandFeature(state.products);
     renderRecentProducts(state.products);
   });
 
-  // Dropdown options (category)
+  // Dropdown options
   elements.categoryDropdown?.addEventListener('click', async (e) => {
     const li = e.target.closest('li');
     if (!li) return;
@@ -359,7 +346,6 @@ function initEventListeners() {
     state.visibleProducts = state.perPage;
     elements.dropdownSelected && (elements.dropdownSelected.textContent = li.textContent);
 
-    // update active class in grid
     document.querySelectorAll('.cat-box').forEach(box => {
       box.classList.toggle('active', box.dataset.filter === newCat);
     });
@@ -370,7 +356,7 @@ function initEventListeners() {
     renderRecentProducts(state.products);
   });
 
-  // Search UI
+  // Search button
   document.querySelector('.search-bar button')?.addEventListener('click', async () => {
     const kw = elements.searchInput?.value?.trim() || '';
     state.userRequestedSearch = kw;
@@ -381,6 +367,7 @@ function initEventListeners() {
     renderRecentProducts(state.products);
   });
 
+  // Enter key search
   elements.searchInput?.addEventListener('keypress', async (e) => {
     if (e.key === 'Enter') {
       const kw = elements.searchInput.value.trim();
@@ -405,8 +392,12 @@ function initEventListeners() {
 /* ------------------------- cart ------------------------- */
 
 function addToCart(productId) {
-  const product = state.products.find(p => p._id === productId) || []; // if not loaded, you'll want to refetch product detail in future
-  if (!product) return;
+  const product = state.products.find(p => p._id === productId);
+  if (!product) {
+    // product not in current list — could fetch detail in future
+    console.warn('addToCart: product not loaded', productId);
+    return;
+  }
 
   let cart = JSON.parse(localStorage.getItem('cart')) || [];
   const existing = cart.find(i => i.id === productId);
@@ -455,7 +446,6 @@ function animateProductCards() {
 }
 
 function initBrandSwiper() {
-  // ensure Swiper is available on the page
   if (typeof Swiper === 'undefined') return;
   state.brandSwiper = new Swiper(".mySwiper", {
     slidesPerView: 1.2,
@@ -478,16 +468,67 @@ function initRecentSwiper() {
   });
 }
 
+/* ------------------------- footer (fix + safe animation) ------------------------- */
+
+function updateYear() {
+  try {
+    const el = document.getElementById("year");
+    if (el) {
+      el.textContent = new Date().getFullYear();
+    } else {
+      // fallback: create footer-bottom if missing
+      const footer = document.querySelector(".site-footer");
+      if (footer) {
+        const fb = document.createElement("div");
+        fb.className = "footer-bottom";
+        fb.innerHTML = `&copy; ${new Date().getFullYear()} SWISSTools. All rights reserved.`;
+        footer.appendChild(fb);
+      }
+    }
+  } catch (err) {
+    console.warn("updateYear error", err);
+  }
+}
+
+function animateFooter() {
+  try {
+    if (typeof gsap !== "undefined" && typeof ScrollTrigger !== "undefined") {
+      // ScrollTrigger may be globally available from your GSAP import — safe guard above
+      gsap.registerPlugin(ScrollTrigger);
+      gsap.from(".footer-column", {
+        scrollTrigger: { trigger: ".site-footer", start: "top 80%", toggleActions: "play none none none" },
+        opacity: 0, y: 30, duration: 0.6, stagger: 0.2, ease: "power2.out"
+      });
+      gsap.from(".footer-bottom", {
+        scrollTrigger: { trigger: ".site-footer", start: "top 80%", toggleActions: "play none none none" },
+        opacity: 0, y: 20, duration: 0.5, delay: 0.3, ease: "power2.out"
+      });
+    } else {
+      // fallback: ensure footer visible
+      document.querySelectorAll(".footer-column, .footer-bottom").forEach(el => {
+        el.style.opacity = "1";
+        el.style.transform = "translateY(0)";
+      });
+    }
+  } catch (err) {
+    console.warn("animateFooter error", err);
+    document.querySelectorAll(".footer-column, .footer-bottom").forEach(el => {
+      el.style.opacity = "1";
+      el.style.transform = "translateY(0)";
+    });
+  }
+}
+
 /* ------------------------- init / boot ------------------------- */
 
 async function initApp() {
-  elements.productGrid && (elements.productGrid.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>');
-
   try {
-    // header
-    updateHeaderView();
+    if (elements.productGrid) elements.productGrid.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
 
-    // categories & brands (small, safe to load all)
+    // header
+    try { updateHeaderView(); } catch (hErr) { console.warn("updateHeaderView error", hErr); }
+
+    // categories & brands
     const catsResp = await fetchJson('/api/categories', { showSpinner: false });
     allCategories = catsResp.success ? catsResp.data : [];
 
@@ -496,7 +537,7 @@ async function initApp() {
 
     renderCategories();
 
-    // load first page of products (server-side paging) using current activeCategory/search
+    // load first page products
     await loadFirstProductsPage();
 
     // render UI pieces
@@ -504,7 +545,7 @@ async function initApp() {
     renderBrandFeature(state.products);
     renderRecentProducts(state.products);
 
-    // listeners and extra UI behavior
+    // listeners and behavior
     initEventListeners();
     initMenuToggle();
     initSmoothScroll();
@@ -512,15 +553,19 @@ async function initApp() {
     initScrollReveal();
     initScrollToTop();
     updateYear();
+    animateFooter();
 
-    // set cart count
     updateCartCount();
 
+    console.log('initApp completed');
   } catch (err) {
     console.error('initApp error', err);
     if (elements.productGrid) {
       elements.productGrid.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-circle"></i><p>Failed to load products</p></div>`;
     }
+    // ensure footer year visible even on failure
+    updateYear();
+    animateFooter();
   }
 }
 
@@ -562,7 +607,7 @@ function initDropdown() {
 
 function initScrollReveal() {
   const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add("visible"); });
+    entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
   }, { threshold: 0.1 });
   document.querySelectorAll(".animate-fade-in, .animate-up").forEach(el => observer.observe(el));
 }
@@ -571,11 +616,6 @@ function initScrollToTop() {
   const scrollTopBtn = document.getElementById("scrollTopBtn");
   window.onscroll = function() { if (scrollTopBtn) scrollTopBtn.style.display = (document.documentElement.scrollTop > 300) ? "block" : "none"; };
   scrollTopBtn?.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
-}
-
-function updateYear() {
-  const el = document.getElementById("year");
-  if (el) el.textContent = new Date().getFullYear();
 }
 
 /* ------------------------- boot ------------------------- */
