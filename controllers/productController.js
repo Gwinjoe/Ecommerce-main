@@ -22,18 +22,66 @@ const parseNumber = (v, fallback = undefined) => {
   return Number.isFinite(n) ? n : fallback;
 };
 
-/**
- * GET /api/products
- * Supports:
- *  - ?limit=20
- *  - ?page=1
- *  - ?sort=price (or -price for desc or createdAt/-createdAt)
- *  - ?search=term
- *  - ?category=<categoryId>
- *  - ?brand=<brandId>
- *  - ?minPrice=0&maxPrice=10000
- *  - ?minRating=3
- */
+
+const parseDecimalToNumber = (v) => {
+  if (v == null) return null;
+  try {
+    const s = typeof v === 'object' && typeof v.toString === 'function' ? v.toString() : String(v);
+    const n = parseFloat(s);
+    return Number.isFinite(n) ? n : null;
+  } catch (e) {
+    return null;
+  }
+};
+
+exports.getPriceRange = async (req, res) => {
+  try {
+    const { category, brand, minRating, search } = req.query;
+    const filter = {};
+
+    if (category && mongoose.Types.ObjectId.isValid(category)) filter.category = category;
+    if (brand && mongoose.Types.ObjectId.isValid(brand)) filter.brand = brand;
+    if (minRating !== undefined) {
+      const r = parseFloat(minRating);
+      if (!Number.isNaN(r)) filter.ratings = { $gte: r };
+    }
+    if (search && String(search).trim().length) {
+      filter.$or = [
+        { name: { $regex: String(search), $options: 'i' } },
+        { description: { $regex: String(search), $options: 'i' } }
+      ];
+    }
+
+    const agg = [
+      { $match: filter },
+      {
+        $group: {
+          _id: null,
+          minPrice: { $min: "$price" },
+          maxPrice: { $max: "$price" }
+        }
+      }
+    ];
+
+    const result = await Product.aggregate(agg).exec();
+
+    if (!result || result.length === 0) {
+      return res.status(200).json({ success: true, data: { min: 0, max: 0 } });
+    }
+
+    const { minPrice, maxPrice } = result[0];
+    const min = parseDecimalToNumber(minPrice) ?? 0;
+    const max = parseDecimalToNumber(maxPrice) ?? 0;
+
+    res.set('Cache-Control', 'public, max-age=60'); // 60s
+
+    return res.status(200).json({ success: true, data: { min, max } });
+  } catch (err) {
+    console.error('getPriceRange error', err);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
 exports.getProducts = async (req, res) => {
   try {
     const {
@@ -48,16 +96,12 @@ exports.getProducts = async (req, res) => {
       minRating
     } = req.query;
 
-    // sanitize / enforce limits
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const perPage = Math.min(100, Math.max(1, parseInt(limit, 10) || 20)); // max 100
 
-    // build filter
     const filter = {};
 
     if (search && String(search).trim().length) {
-      // text-search-ish: will match name OR description partially (case-insensitive)
-      // If you added a text index you can switch to $text for better relevance.
       filter.$or = [
         { name: { $regex: String(search), $options: 'i' } },
         { description: { $regex: String(search), $options: 'i' } }
@@ -80,10 +124,8 @@ exports.getProducts = async (req, res) => {
       filter.ratings = { $gte: minR };
     }
 
-    // Count total matching docs (for pagination metadata)
     const total = await Product.countDocuments(filter);
 
-    // Fetch page
     const products = await Product.find(filter)
       .sort(sort)                        // allow client to pass -price, price, createdAt etc.
       .skip((pageNum - 1) * perPage)
@@ -93,7 +135,6 @@ exports.getProducts = async (req, res) => {
       .lean()
       .exec();
 
-    // Set light caching for repeated requests (adjust to your infra)
     res.set('Cache-Control', 'public, max-age=30'); // 30s cache for simple scale
 
     return res.status(200).json({
