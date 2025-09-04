@@ -3,7 +3,7 @@ const Product = require("../models/productSchema");
 const Category = require("../models/categorySchema");
 const { uploader, uploadMultiple } = require("../middlewares/uploader");
 const cloudinary = require("cloudinary").v2;
-
+const mongoose = require('mongoose');
 
 exports.product_count = async (req, res) => {
   const count = await Product.countDocuments({});
@@ -15,16 +15,138 @@ exports.category_count = async (req, res) => {
   res.status(200).json({ success: true, count })
 }
 
-exports.getProducts = async (req, res) => {
-  const { limit } = req.query;
-  if (limit) {
-    const data = await Product.find().limit(limit).sort({ createdAt: -1 }).populate("category").populate("brand");
-    return res.status(201).json({ success: true, data })
-  }
-  const data = await Product.find().sort({ createdAt: -1 }).populate("category").populate("brand");
-  res.status(201).json({ success: true, data });
-}
 
+const parseNumber = (v, fallback = undefined) => {
+  if (v === undefined) return fallback;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+};
+
+/**
+ * GET /api/products
+ * Supports:
+ *  - ?limit=20
+ *  - ?page=1
+ *  - ?sort=price (or -price for desc or createdAt/-createdAt)
+ *  - ?search=term
+ *  - ?category=<categoryId>
+ *  - ?brand=<brandId>
+ *  - ?minPrice=0&maxPrice=10000
+ *  - ?minRating=3
+ */
+exports.getProducts = async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 20,
+      sort = '-createdAt',
+      search,
+      category,
+      brand,
+      minPrice,
+      maxPrice,
+      minRating
+    } = req.query;
+
+    // sanitize / enforce limits
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const perPage = Math.min(100, Math.max(1, parseInt(limit, 10) || 20)); // max 100
+
+    // build filter
+    const filter = {};
+
+    if (search && String(search).trim().length) {
+      // text-search-ish: will match name OR description partially (case-insensitive)
+      // If you added a text index you can switch to $text for better relevance.
+      filter.$or = [
+        { name: { $regex: String(search), $options: 'i' } },
+        { description: { $regex: String(search), $options: 'i' } }
+      ];
+    }
+
+    if (category) filter.category = mongoose.Types.ObjectId.isValid(category) ? category : category;
+    if (brand) filter.brand = mongoose.Types.ObjectId.isValid(brand) ? brand : brand;
+
+    const minP = parseNumber(minPrice);
+    const maxP = parseNumber(maxPrice);
+    if (minP !== undefined || maxP !== undefined) {
+      filter.price = {};
+      if (minP !== undefined) filter.price.$gte = minP;
+      if (maxP !== undefined) filter.price.$lte = maxP;
+    }
+
+    const minR = parseNumber(minRating);
+    if (minR !== undefined) {
+      filter.ratings = { $gte: minR };
+    }
+
+    // Count total matching docs (for pagination metadata)
+    const total = await Product.countDocuments(filter);
+
+    // Fetch page
+    const products = await Product.find(filter)
+      .sort(sort)                        // allow client to pass -price, price, createdAt etc.
+      .skip((pageNum - 1) * perPage)
+      .limit(perPage)
+      .populate('category')
+      .populate('brand')
+      .lean()
+      .exec();
+
+    // Set light caching for repeated requests (adjust to your infra)
+    res.set('Cache-Control', 'public, max-age=30'); // 30s cache for simple scale
+
+    return res.status(200).json({
+      success: true,
+      data: products,
+      meta: {
+        total,
+        page: pageNum,
+        limit: perPage,
+        pages: Math.ceil(total / perPage)
+      }
+    });
+  } catch (err) {
+    console.error('getProducts error:', err);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+/**
+ * Optional helper endpoint:
+ * GET /api/products/count
+ * Returns only total matching count for given filters (useful to pre-render pagination).
+ */
+exports.getProductsCount = async (req, res) => {
+  try {
+    const { search, category, brand, minPrice, maxPrice, minRating } = req.query;
+    const filter = {};
+    if (search) filter.$or = [
+      { name: { $regex: String(search), $options: 'i' } },
+      { description: { $regex: String(search), $options: 'i' } }
+    ];
+    if (category) filter.category = mongoose.Types.ObjectId.isValid(category) ? category : category;
+    if (brand) filter.brand = mongoose.Types.ObjectId.isValid(brand) ? brand : brand;
+
+    const minP = parseNumber(minPrice);
+    const maxP = parseNumber(maxPrice);
+    if (minP !== undefined || maxP !== undefined) {
+      filter.price = {};
+      if (minP !== undefined) filter.price.$gte = minP;
+      if (maxP !== undefined) filter.price.$lte = maxP;
+    }
+
+    const minR = parseNumber(minRating);
+    if (minR !== undefined) filter.ratings = { $gte: minR };
+
+    const total = await Product.countDocuments(filter);
+    res.set('Cache-Control', 'public, max-age=30');
+    return res.status(200).json({ success: true, total });
+  } catch (err) {
+    console.error('getProductsCount error:', err);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
 exports.get_categories = async (req, res) => {
   try {
     const data = await Category.find();

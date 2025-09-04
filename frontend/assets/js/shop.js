@@ -1,10 +1,11 @@
+import {
+  updateHeaderVie
 import { updateHeaderView, useapi, fetchCurrentUser } from "./user-details.js";
-let ip;
+
 document.addEventListener('DOMContentLoaded', async () => {
   updateHeaderView();
-  const { ipapi } = await useapi();
-  ip = ipapi;
   const user = await fetchCurrentUser();
+
   const elements = {
     menuToggle: document.getElementById('menu-toggle'),
     navMenu: document.getElementById('nav-menu'),
@@ -42,9 +43,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     recentlyViewed: document.getElementById('recentlyViewed')
   };
 
-
   let state = {
-    products: [],
+    products: [],            // current page items only
     categories: [],
     brands: [],
     cart: JSON.parse(localStorage.getItem('cart')) || [],
@@ -63,7 +63,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       maxPrice: 1000000,
       sort: 'default'
     },
-    absoluteMaxPrice: 1000000
+    absoluteMaxPrice: 1000000,
+    absoluteMinPrice: 0,
+    totalProducts: 0,
+    totalPages: 1,
+    hasFetchedAll: false
   };
 
   const debounce = (func, wait) => {
@@ -74,31 +78,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
   };
 
-  const formatCurrency = (amount) => {
-    const value = amount?.$numberDecimal ? parseFloat(amount.$numberDecimal) : parseFloat(amount);
-    if (ip.currency !== "NGN") {
-      return new Intl.NumberFormat('en-NG', {
-        style: 'currency',
-        currency: ip.currency,
-        minimumFractionDigits: 2
-      }).format(amount)
-    }
-    return `₦${value.toLocaleString('en-NG', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    })}`;
-  };
-
   const getNumericValue = (value) => {
-    if (value?.$numberDecimal) {
-      return parseFloat(value.$numberDecimal);
+    if (value == null) return 0;
+    if (typeof value === 'object' && value.$numberDecimal) {
+      return parseFloat(value.$numberDecimal) || 0;
     }
-    return parseFloat(value) || 0;
+    if (typeof value === 'string' || typeof value === 'number') {
+      return parseFloat(value) || 0;
+    }
+    return 0;
   };
 
-  const fetchData = async (endpoint) => {
+  const formatCurrency = (amount) => {
+    const numeric = getNumericValue(amount);
+    return new Intl.NumberFormat('en-NG', {
+      style: 'currency',
+      currency: "NGN",
+      minimumFractionDigits: 2
+    }).format(numeric);
+  };
+
+  // Basic fetch that returns data array (old-style)
+  const fetchData = async (endpoint, { showSpinner = true } = {}) => {
     try {
-      elements.spinner.style.display = 'block';
+      if (showSpinner) elements.spinner.style.display = 'block';
       const response = await fetch(endpoint);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -109,105 +112,229 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error('Error fetching data:', error);
       return [];
     } finally {
+      if (showSpinner) elements.spinner.style.display = 'none';
+    }
+  };
+
+  // Fetch JSON and return full object (success, data, meta)
+  const fetchJson = async (endpoint, { showSpinner = true } = {}) => {
+    try {
+      if (showSpinner) elements.spinner.style.display = 'block';
+      const response = await fetch(endpoint);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      console.error('fetchJson error:', error);
+      return { success: false, data: [], meta: {} };
+    } finally {
+      if (showSpinner) elements.spinner.style.display = 'none';
+    }
+  };
+
+  // append nodes in batches (for when prefetching next page)
+  const appendProductNodes = (products) => {
+    const frag = document.createDocumentFragment();
+    products.forEach(p => frag.appendChild(createProductCard(p)));
+    elements.productGrid.appendChild(frag);
+  };
+
+  const scheduleWork = (fn) => {
+    if (typeof window.requestIdleCallback === 'function') {
+      window.requestIdleCallback(fn, { timeout: 500 });
+    } else {
+      setTimeout(fn, 50);
+    }
+  };
+
+  // prefetch next page (lightweight, helps perceived speed)
+  const prefetchNextPage = async (page) => {
+    if (!page || page > state.totalPages) return;
+    try {
+      const q = buildQuery({ page, limit: state.itemsPerPage, prefetch: true });
+      const resp = await fetchJson(`/api/products?${q}`, { showSpinner: false });
+      // We don't attach prefetch results into state.products directly — but you could cache them
+      if (resp.success && Array.isArray(resp.data)) {
+        // Optionally store in a small cache:
+        // prefetchCache[page] = resp.data;
+        // For now we just append nothing — this function intentionally light.
+      }
+    } catch (err) {
+      // ignore prefetch errors
+    }
+  };
+
+  // Build querystring from filters + pagination + sort
+  const buildQuery = ({ page = state.currentPage, limit = state.itemsPerPage } = {}) => {
+    const params = new URLSearchParams();
+    params.set('page', page);
+    params.set('limit', limit);
+
+    const f = state.currentFilters;
+    if (f.search) params.set('search', f.search);
+    if (f.category && f.category !== 'all') params.set('category', f.category);
+    if (f.brand && f.brand !== 'all') params.set('brand', f.brand);
+    if (f.minPrice != null) params.set('minPrice', f.minPrice);
+    if (f.maxPrice != null) params.set('maxPrice', f.maxPrice);
+
+    // Map sort selection to server sort param
+    switch (f.sort) {
+      case 'low-high':
+        params.set('sort', 'price');
+        break;
+      case 'high-low':
+        params.set('sort', '-price');
+        break;
+      case 'rating':
+        params.set('sort', '-ratings');
+        break;
+      default:
+        params.set('sort', '-createdAt');
+    }
+
+    return params.toString();
+  };
+
+  // fetch a page from server using current filters
+  const fetchPage = async (page = 1) => {
+    try {
+      elements.spinner.style.display = 'block';
+      state.currentPage = page;
+
+      const q = buildQuery({ page, limit: state.itemsPerPage });
+      const resp = await fetchJson(`/api/products?${q}`, { showSpinner: false });
+
+      if (resp.success) {
+        state.products = Array.isArray(resp.data) ? resp.data : [];
+        state.totalProducts = resp.meta?.total ?? (state.products.length || 0);
+        state.totalPages = resp.meta?.pages ?? Math.max(1, Math.ceil(state.totalProducts / state.itemsPerPage));
+      } else {
+        state.products = [];
+        state.totalProducts = 0;
+        state.totalPages = 1;
+      }
+
+      // render the page
+      renderProducts();
+
+      // prefetch next page in idle time
+      scheduleWork(() => prefetchNextPage(state.currentPage + 1));
+    } catch (err) {
+      console.error('fetchPage error', err);
+    } finally {
       elements.spinner.style.display = 'none';
     }
   };
 
+  // fetch absolute min/max price from server so slider is accurate
+  const fetchPriceRange = async () => {
+    try {
+      const resp = await fetchJson('/api/products/price-range', { showSpinner: false });
+      if (resp.success && resp.data) {
+        const { min = 0, max = 1000000 } = resp.data;
+        state.absoluteMinPrice = Math.floor(min);
+        state.absoluteMaxPrice = Math.ceil(max);
+      } else {
+        state.absoluteMinPrice = 0;
+        state.absoluteMaxPrice = 1000000;
+      }
+      // update UI controls
+      elements.priceMin.min = state.absoluteMinPrice;
+      elements.priceMax.max = state.absoluteMaxPrice;
+      elements.priceMin.max = state.absoluteMaxPrice;
+      elements.priceMin.value = state.absoluteMinPrice;
+      elements.priceMax.value = state.absoluteMaxPrice;
+      state.currentFilters.minPrice = state.absoluteMinPrice;
+      state.currentFilters.maxPrice = state.absoluteMaxPrice;
+      updatePriceDisplay();
+    } catch (err) {
+      console.error('fetchPriceRange error', err);
+    }
+  };
+
+  // initShop uses server-driven pagination & price-range
   const initShop = async () => {
-    state.categories = await fetchData('/api/categories');
-    state.brands = await fetchData('/api/brands');
-    state.products = await fetchData('/api/products');
+    state.categories = await fetchData('/api/categories', { showSpinner: false });
+    state.brands = await fetchData('/api/brands', { showSpinner: false });
 
-    if (ip.currency !== "NGN") {
-      state.products.forEach((product) => {
-        product.price.$numberDecimal = convert(product.price.$numberDecimal, ip.currency)
-      })
-    }
-
-    if (state.products.length > 0) {
-      const maxPrice = Math.max(...state.products.map(p => getNumericValue(p.price)));
-      state.absoluteMaxPrice = Math.ceil(maxPrice / 100) * 100;
-    } else {
-      state.absoluteMaxPrice = 1000000;
-    }
-
-    state.currentFilters.maxPrice = state.absoluteMaxPrice;
-    elements.priceMax.max = state.absoluteMaxPrice;
-    elements.priceMin.max = state.absoluteMaxPrice;
-    elements.priceMax.value = state.absoluteMaxPrice;
-
+    // populate category/brand options (if present)
     const categoryOptions = document.getElementById('categoryOptions');
-    state.categories.forEach(category => {
-      const option = document.createElement('div');
-      option.className = 'filter-option';
-      option.dataset.value = category._id;
-      option.textContent = category.name;
-      categoryOptions.appendChild(option);
-    });
+    if (categoryOptions) {
+      categoryOptions.innerHTML = '';
+      const allCat = document.createElement('div');
+      allCat.className = 'filter-option active';
+      allCat.dataset.value = 'all';
+      allCat.textContent = 'All';
+      categoryOptions.appendChild(allCat);
+      state.categories.forEach(category => {
+        const option = document.createElement('div');
+        option.className = 'filter-option';
+        option.dataset.value = category._id;
+        option.textContent = category.name;
+        categoryOptions.appendChild(option);
+      });
+    }
 
     const brandOptions = document.getElementById('brandOptions');
-    state.brands.forEach(brand => {
-      const option = document.createElement('div');
-      option.className = 'filter-option';
-      option.dataset.value = brand._id;
-      option.textContent = brand.name;
-      brandOptions.appendChild(option);
-    });
+    if (brandOptions) {
+      brandOptions.innerHTML = '';
+      const allBrand = document.createElement('div');
+      allBrand.className = 'filter-option active';
+      allBrand.dataset.value = 'all';
+      allBrand.textContent = 'All';
+      brandOptions.appendChild(allBrand);
+      state.brands.forEach(brand => {
+        const option = document.createElement('div');
+        option.className = 'filter-option';
+        option.dataset.value = brand._id;
+        option.textContent = brand.name;
+        brandOptions.appendChild(option);
+      });
+    }
 
+    // wire up filter option clicks
     document.querySelectorAll('.filter-option').forEach(option => {
-      option.addEventListener('click', () => {
+      option.addEventListener('click', async () => {
         const container = option.parentElement;
         const filterType = container.id.replace('Options', '');
-
-        container.querySelectorAll('.filter-option').forEach(opt => {
-          opt.classList.remove('active');
-        });
-
+        container.querySelectorAll('.filter-option').forEach(opt => opt.classList.remove('active'));
         option.classList.add('active');
 
         state.currentFilters[filterType] = option.dataset.value;
-        state.currentPage = 1;
-        renderProducts();
+        // fetch page 1 from server with new filter
+        await fetchPage(1);
         updateFilterSummary();
       });
     });
-    renderProducts();
+
+    // Price range must be fetched from server first to set accurate slider bounds
+    await fetchPriceRange();
+
+    // load first page with the server (this will also set total/products)
+    await fetchPage(1);
+
     updateCartCount();
     updateFilterSummary();
     updatePriceDisplay();
   };
 
+  // renderProducts now renders state.products (server-provided page)
   const renderProducts = () => {
     elements.productGrid.innerHTML = '';
     elements.noResults.style.display = 'none';
 
-    if (state.products.length === 0) {
-      elements.noResults.style.display = 'block';
-      elements.noResults.textContent = 'No products available. Please check back later.';
-      return;
-    }
-
-    let filteredProducts = applyFilters();
-
-
-    if (filteredProducts.length === 0) {
+    if (!state.products || state.products.length === 0) {
       elements.noResults.style.display = 'block';
       elements.noResults.textContent = 'No products found matching your criteria.';
+      renderPagination(0);
       return;
     }
 
-    filteredProducts = applySorting(filteredProducts);
+    const frag = document.createDocumentFragment();
+    state.products.forEach(product => frag.appendChild(createProductCard(product)));
+    elements.productGrid.appendChild(frag);
 
-    const start = (state.currentPage - 1) * state.itemsPerPage;
-    const end = start + state.itemsPerPage;
-    const paginatedProducts = filteredProducts.slice(start, end);
-
-    paginatedProducts.forEach(product => {
-      const productCard = createProductCard(product);
-      elements.productGrid.appendChild(productCard);
-    });
-
-    renderPagination(filteredProducts.length);
+    // render pagination using totalProducts (server-provided)
+    renderPagination(state.totalProducts);
   };
 
   const createProductCard = (product) => {
@@ -221,62 +348,60 @@ document.addEventListener('DOMContentLoaded', async () => {
     productCard.dataset.rating = getNumericValue(product.ratings);
 
     const badges = `
-          ${product.isTrending ? '<span class="badge trending">Trending</span>' : ''}
-          ${product.isNew ? '<span class="badge new">New</span>' : ''}
-          ${product.isBestSeller ? '<span class="badge best">Best Seller</span>' : ''}
-        `;
+      ${product.isTrending ? '<span class="badge trending">Trending</span>' : ''}
+      ${product.isNew ? '<span class="badge new">New</span>' : ''}
+      ${product.isBestSeller ? '<span class="badge best">Best Seller</span>' : ''}
+    `;
 
     const ratingValue = getNumericValue(product.ratings);
     const fullStars = Math.floor(ratingValue);
     const halfStar = ratingValue % 1 >= 0.5 ? 1 : 0;
     const emptyStars = 5 - fullStars - halfStar;
 
-    const ratingStars = '★'.repeat(fullStars) +
-      (halfStar ? '½' : '') +
-      '☆'.repeat(emptyStars);
+    const ratingStars = '★'.repeat(fullStars) + (halfStar ? '½' : '') + '☆'.repeat(emptyStars);
 
     productCard.innerHTML = `
-          ${badges}
-          <img src="${product.images?.mainImage?.url || 'assets/images/default-product.png'}" 
-               alt="${product.name}" 
-               loading="lazy">
-          <h2 class="product-name">
-            <a href="/product?id=${product._id}" class="product-link">${product.name}</a>
-          </h2>
-          <p class="brand">${product.brand?.name || 'No Brand'}</p>
-          <div class="rating">
-            <span class="stars">${ratingStars}</span>
-            <span>(${ratingValue.toFixed(1)})</span>
-          </div>
-          <p class="price">${formatCurrency(product.price)}</p>
-          <div class="product-actions">
-            <button type="button" class="add-to-cart" aria-label="Add ${product.name} to cart">
-              Add to Cart
-            </button>
-            <button type="button" class="quick-view" aria-label="Quick view ${product.name}">
-              <i class="fas fa-eye"></i>
-            </button>
-            <button type="button" class="wishlist" style="color: ${user && user.wishlist.find(item => item == product._id) ? 'red' : 'white'};" aria-label="Add ${product.name} to wishlist">
-              <i class="fas fa-heart"></i>
-            </button>
-            <button type="button" class="compare" aria-label="Compare ${product.name}">
-              <i class="fas fa-balance-scale"></i>
-            </button>
-          </div>
-          <div class="tooltip"></div>
-        `;
+      ${badges}
+      <img src="${product.images?.mainImage?.url || 'assets/images/default-product.png'}"
+           alt="${product.name}"
+           loading="lazy">
+      <h2 class="product-name">
+        <a href="/product?id=${product._id}" class="product-link">${product.name}</a>
+      </h2>
+      <p class="brand">${product.brand?.name || 'No Brand'}</p>
+      <div class="rating">
+        <span class="stars">${ratingStars}</span>
+        <span>(${(ratingValue || 0).toFixed(1)})</span>
+      </div>
+      <p class="price">${formatCurrency(product.price)}</p>
+      <div class="product-actions">
+        <button type="button" class="add-to-cart" aria-label="Add ${product.name} to cart">
+          Add to Cart
+        </button>
+        <button type="button" class="quick-view" aria-label="Quick view ${product.name}">
+          <i class="fas fa-eye"></i>
+        </button>
+        <button type="button" class="wishlist" style="color: ${user && user.wishlist && user.wishlist.find(item => item == product._id) ? 'red' : 'white'};" aria-label="Add ${product.name} to wishlist">
+          <i class="fas fa-heart"></i>
+        </button>
+        <button type="button" class="compare" aria-label="Compare ${product.name}">
+          <i class="fas fa-balance-scale"></i>
+        </button>
+      </div>
+      <div class="tooltip"></div>
+    `;
 
     return productCard;
   };
 
-
   const applyFilters = () => {
+    // kept for locally filtering recentlyViewed items only (not used for pages)
     return state.products.filter(product => {
       const productPrice = getNumericValue(product.price);
       const productRating = getNumericValue(product.ratings);
 
-      const matchesSearch = product.name.toLowerCase()
-        .includes(state.currentFilters.search.toLowerCase());
+      const matchesSearch = product.name && product.name.toLowerCase()
+        .includes((state.currentFilters.search || '').toLowerCase());
 
       const matchesCategory = state.currentFilters.category === 'all' ||
         (product.category?._id === state.currentFilters.category);
@@ -295,6 +420,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   const applySorting = (products) => {
+    // Not used for server-driven pages; kept if you want local sort for small sets
     return products.sort((a, b) => {
       const priceA = getNumericValue(a.price);
       const priceB = getNumericValue(b.price);
@@ -316,7 +442,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const renderPagination = (totalItems) => {
     elements.pagination.innerHTML = '';
-    const pageCount = Math.ceil(totalItems / state.itemsPerPage);
+    const pageCount = Math.max(1, Math.ceil(totalItems / state.itemsPerPage));
+    state.totalPages = pageCount;
 
     if (state.currentPage > 1) {
       const prevLink = document.createElement('a');
@@ -324,26 +451,26 @@ document.addEventListener('DOMContentLoaded', async () => {
       prevLink.innerHTML = '&laquo;';
       prevLink.addEventListener('click', (e) => {
         e.preventDefault();
-        state.currentPage--;
-        renderProducts();
+        fetchPage(state.currentPage - 1);
       });
       elements.pagination.appendChild(prevLink);
     }
 
-    for (let i = 1; i <= pageCount; i++) {
+    // show windowed pagination (avoid rendering thousands of page links)
+    const maxButtons = 7;
+    let start = Math.max(1, state.currentPage - Math.floor(maxButtons / 2));
+    let end = Math.min(pageCount, start + maxButtons - 1);
+    if (end - start < maxButtons - 1) start = Math.max(1, end - maxButtons + 1);
+
+    for (let i = start; i <= end; i++) {
       const pageLink = document.createElement('a');
       pageLink.href = '#';
       pageLink.textContent = i;
-      if (i === state.currentPage) {
-        pageLink.classList.add('current');
-      }
-
+      if (i === state.currentPage) pageLink.classList.add('current');
       pageLink.addEventListener('click', (e) => {
         e.preventDefault();
-        state.currentPage = i;
-        renderProducts();
+        fetchPage(i);
       });
-
       elements.pagination.appendChild(pageLink);
     }
 
@@ -353,8 +480,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       nextLink.innerHTML = '&raquo;';
       nextLink.addEventListener('click', (e) => {
         e.preventDefault();
-        state.currentPage++;
-        renderProducts();
+        fetchPage(state.currentPage + 1);
       });
       elements.pagination.appendChild(nextLink);
     }
@@ -369,68 +495,42 @@ document.addEventListener('DOMContentLoaded', async () => {
     elements.filterSummary.innerHTML = '';
 
     const filters = [
-      {
-        name: 'Search',
-        value: state.currentFilters.search,
-        display: state.currentFilters.search ? `"${state.currentFilters.search}"` : null
-      },
-      {
-        name: 'Category',
-        value: state.currentFilters.category,
-        display: state.currentFilters.category === 'all' ? null :
-          state.categories.find(c => c._id === state.currentFilters.category)?.name
-      },
-      {
-        name: 'Brand',
-        value: state.currentFilters.brand,
-        display: state.currentFilters.brand === 'all' ? null :
-          state.brands.find(b => b._id === state.currentFilters.brand)?.name
-      },
-      {
-        name: 'Rating',
-        value: state.currentFilters.rating,
-        display: state.currentFilters.rating === 'all' ? null :
-          `${state.currentFilters.rating}+ stars`
-      },
-      {
-        name: 'Price',
-        value: `${state.currentFilters.minPrice}-${state.currentFilters.maxPrice}`,
-        display: state.currentFilters.minPrice > 0 || state.currentFilters.maxPrice < state.absoluteMaxPrice ?
-          `${formatCurrency(state.currentFilters.minPrice)} - ${formatCurrency(state.currentFilters.maxPrice)}` : null
-      }
+      { name: 'Search', value: state.currentFilters.search, display: state.currentFilters.search ? `"${state.currentFilters.search}"` : null },
+      { name: 'Category', value: state.currentFilters.category, display: state.currentFilters.category === 'all' ? null : state.categories.find(c => c._id === state.currentFilters.category)?.name },
+      { name: 'Brand', value: state.currentFilters.brand, display: state.currentFilters.brand === 'all' ? null : state.brands.find(b => b._id === state.currentFilters.brand)?.name },
+      { name: 'Rating', value: state.currentFilters.rating, display: state.currentFilters.rating === 'all' ? null : `${state.currentFilters.rating}+ stars` },
+      { name: 'Price', value: `${state.currentFilters.minPrice}-${state.currentFilters.maxPrice}`, display: state.currentFilters.minPrice > state.absoluteMinPrice || state.currentFilters.maxPrice < state.absoluteMaxPrice ? `${formatCurrency(state.currentFilters.minPrice)} - ${formatCurrency(state.currentFilters.maxPrice)}` : null }
     ].filter(f => f.display);
 
     filters.forEach(filter => {
       const filterTag = document.createElement('div');
       filterTag.className = 'filter-tag';
-      filterTag.innerHTML = `
-            ${filter.name}: ${filter.display}
-            <span aria-label="Remove filter">×</span>
-          `;
+      filterTag.innerHTML = `${filter.name}: ${filter.display} <span aria-label="Remove filter">×</span>`;
 
-      filterTag.querySelector('span').addEventListener('click', () => {
+      filterTag.querySelector('span').addEventListener('click', async () => {
         if (filter.name === 'Search') {
           state.currentFilters.search = '';
           elements.searchInput.value = '';
         } else if (filter.name === 'Category') {
           state.currentFilters.category = 'all';
-          document.querySelector('#categoryOptions .filter-option[data-value="all"]').click();
+          const el = document.querySelector('#categoryOptions .filter-option[data-value="all"]');
+          if (el) el.click();
         } else if (filter.name === 'Brand') {
           state.currentFilters.brand = 'all';
-          document.querySelector('#brandOptions .filter-option[data-value="all"]').click();
+          const el = document.querySelector('#brandOptions .filter-option[data-value="all"]');
+          if (el) el.click();
         } else if (filter.name === 'Rating') {
           state.currentFilters.rating = 'all';
-          document.querySelector('#ratingOptions .filter-option[data-value="all"]').click();
+          const el = document.querySelector('#ratingOptions .filter-option[data-value="all"]');
+          if (el) el.click();
         } else if (filter.name === 'Price') {
-          state.currentFilters.minPrice = 0;
+          state.currentFilters.minPrice = state.absoluteMinPrice;
           state.currentFilters.maxPrice = state.absoluteMaxPrice;
-          elements.priceMin.value = 0;
+          elements.priceMin.value = state.absoluteMinPrice;
           elements.priceMax.value = state.absoluteMaxPrice;
           updatePriceDisplay();
         }
-
-        state.currentPage = 1;
-        renderProducts();
+        await fetchPage(1);
         updateFilterSummary();
       });
 
@@ -443,32 +543,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     elements.maxPriceDisplay.textContent = formatCurrency(elements.priceMax.value);
   };
 
-  const resetFilters = () => {
+  const resetFilters = async () => {
     state.currentFilters = {
       search: '',
       category: 'all',
       brand: 'all',
       rating: 'all',
-      minPrice: 0,
+      minPrice: state.absoluteMinPrice,
       maxPrice: state.absoluteMaxPrice,
       sort: 'default'
     };
 
     elements.searchInput.value = '';
     elements.sortPrice.value = 'default';
-    elements.priceMin.value = 0;
+    elements.priceMin.value = state.absoluteMinPrice;
     elements.priceMax.value = state.absoluteMaxPrice;
 
     document.querySelectorAll('.filter-option').forEach(option => {
       option.classList.remove('active');
-      if (option.dataset.value === 'all') {
-        option.classList.add('active');
-      }
+      if (option.dataset.value === 'all') option.classList.add('active');
     });
 
     state.currentPage = 1;
     updatePriceDisplay();
-    renderProducts();
+    await fetchPage(1);
     updateFilterSummary();
   };
 
@@ -518,14 +616,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     localStorage.setItem('cart', JSON.stringify(state.cart));
 
     if (user) {
-      const response = await fetch("/api/add_to_cart", {
-        method: "PATCH",
-        headers: {
-          "Content-type": "application/json",
-        },
-        body: JSON.stringify({ id: user._id, cartItem: productId, quantity: existingItem.quantity })
-      })
-      const { success } = await response.json();
+      try {
+        const response = await fetch("/api/add_to_cart", {
+          method: "PATCH",
+          headers: { "Content-type": "application/json" },
+          body: JSON.stringify({ id: user._id, cartItem: productId, quantity: existingItem ? existingItem.quantity : quantity })
+        });
+        await response.json();
+      } catch (err) {
+        console.error('addToCart server error', err);
+      }
     }
     updateCartCount();
     showCartFeedback('Added to cart!');
@@ -533,39 +633,38 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const addToWishlist = async (productId) => {
     if (user) {
-      const response = await fetch("/api/add_to_wishlist", {
-        method: "PATCH",
-        headers: {
-          "Content-type": "application/json",
-        },
-        body: JSON.stringify({ id: user._id, item: productId }),
-      });
-      const { success, message } = await response.json();
-
-      if (success) {
-        showCartFeedback(message);
+      try {
+        const response = await fetch("/api/add_to_wishlist", {
+          method: "PATCH",
+          headers: { "Content-type": "application/json" },
+          body: JSON.stringify({ id: user._id, item: productId }),
+        });
+        const { success, message } = await response.json();
+        if (success) showCartFeedback(message);
+      } catch (err) {
+        console.error('addToWishlist error', err);
       }
-
     }
-  }
+  };
 
   const removeFromWishlist = async (productId) => {
     if (user) {
-      const response = await fetch("/api/delete_from_wishlist", {
-        method: "PATCH",
-        headers: {
-          "Content-type": "application/json",
-        },
-        body: JSON.stringify({ userId: user._id, itemId: productId }),
-      });
-      const { success, message } = await response.json();
-
-      if (success) {
-        showCartFeedback(message);
+      try {
+        const response = await fetch("/api/delete_from_wishlist", {
+          method: "PATCH",
+          headers: { "Content-type": "application/json" },
+          body: JSON.stringify({ userId: user._id, itemId: productId }),
+        });
+        const { success, message } = await response.json();
+        if (success) showCartFeedback(message);
+      } catch (err) {
+        console.error('removeFromWishlist error', err);
       }
     }
-  }
-  initShop();
+  };
+
+  // start
+  await initShop();
 
   elements.menuToggle.addEventListener('click', () => {
     elements.navMenu.classList.toggle('active');
@@ -592,15 +691,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     if (e.target.closest('.wishlist')) {
-
       const wishbutton = e.target.closest(".wishlist");
       if (wishbutton.style.color === "red") {
         await removeFromWishlist(productId);
-        wishbutton.style.color = "white"
+        wishbutton.style.color = "white";
         e.stopPropagation();
       } else {
         await addToWishlist(productId);
-        wishbutton.style.color = "red"
+        wishbutton.style.color = "red";
         e.stopPropagation();
       }
     }
@@ -617,11 +715,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const emptyStars = 5 - fullStars - halfStar;
       const ratingStars = '★'.repeat(fullStars) + (halfStar ? '½' : '') + '☆'.repeat(emptyStars);
 
-      elements.modalRating.innerHTML = `
-            <span class="stars">${ratingStars}</span>
-            <span>(${ratingValue.toFixed(1)})</span>
-          `;
-
+      elements.modalRating.innerHTML = `<span class="stars">${ratingStars}</span><span>(${ratingValue.toFixed(1)})</span>`;
       elements.modalPrice.textContent = formatCurrency(product.price);
       elements.modalDescription.textContent = product.description || 'No description available';
       elements.modalAddToCart.dataset.id = productId;
@@ -654,14 +748,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     elements.quickViewModal.style.display = 'none';
   });
 
-  const updateFilters = () => {
+  const updateFilters = async () => {
     state.currentFilters.search = elements.searchInput.value;
     state.currentFilters.sort = elements.sortPrice.value;
-    state.currentFilters.minPrice = parseFloat(elements.priceMin.value) || 0;
+    state.currentFilters.minPrice = parseFloat(elements.priceMin.value) || state.absoluteMinPrice;
     state.currentFilters.maxPrice = parseFloat(elements.priceMax.value) || state.absoluteMaxPrice;
 
-    state.currentPage = 1;
-    renderProducts();
+    // Server-side fetch page 1 with new filters
+    await fetchPage(1);
     updateFilterSummary();
   };
 
@@ -686,11 +780,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   window.addEventListener('click', (e) => {
-    if (e.target === elements.quickViewModal) {
-      elements.quickViewModal.style.display = 'none';
-    }
-    if (e.target === elements.compareModal) {
-      elements.compareModal.style.display = 'none';
-    }
+    if (e.target === elements.quickViewModal) elements.quickViewModal.style.display = 'none';
+    if (e.target === elements.compareModal) elements.compareModal.style.display = 'none';
   });
 });
+
