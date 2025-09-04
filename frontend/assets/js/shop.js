@@ -1,5 +1,4 @@
-import {
-  updateHeaderVie
+
 import { updateHeaderView, useapi, fetchCurrentUser } from "./user-details.js";
 
 document.addEventListener('DOMContentLoaded', async () => {

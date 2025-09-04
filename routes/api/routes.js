@@ -1,7 +1,7 @@
 require("dotenv").config;
 const express = require("express");
 const router = express.Router();
-const { delete_multiple_products, editMultipleProducts, get_product_by_id, category_count, product_count, edit_product, delete_product, getProducts, add_category, get_categories, edit_category, get_category_by_id, delete_category, add_product } = require("../../controllers/productController")
+const { getPriceRange, getProductsCount, delete_multiple_products, editMultipleProducts, get_product_by_id, category_count, product_count, edit_product, delete_product, getProducts, add_category, get_categories, edit_category, get_category_by_id, delete_category, add_product } = require("../../controllers/productController")
 const { addTo_cart, get_wishlist, addTo_wishlist, deletefrom_cart, deletefrom_wishlist, get_wishlist_count } = require("../../controllers/userController")
 const { signup, signout, adminSignout } = require("../../controllers/authController")
 const { notification_count, get_users, get_user_by_id, edit_user, edit_user_details, delete_user, user_count, add_user, get_user } = require("../../controllers/userController")
@@ -102,6 +102,8 @@ router.post("/signup", signup);
 router.get("/logout", signout);
 router.get("/signout", adminSignout);
 
+router.get('/products/count', getProductsCount);
+router.get('/products/price-range', getPriceRange);
 router.get("/products", getProducts);
 router.get("/product/:id", get_product_by_id);
 router.get("/edit_product/:id", get_product_by_id);

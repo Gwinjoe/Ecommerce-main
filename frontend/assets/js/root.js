@@ -1,26 +1,9 @@
-import { updateHeaderView } from "./user-details.js"
 
-async function fetchData(endpoint) {
-  try {
-    const response = await fetch(endpoint);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const data = await response.json();
-    return data.success ? data.data : [];
-  } catch (error) {
-    console.error('Error fetching data:', error);
-    return [];
-  }
-}
-let currency = "NGN";
-let allProducts = [];
-let allCategories = [];
-let allBrands = [];
-let filteredProducts = [];
-let visibleProducts = 6;
-let activeCategory = 'all';
-let brandSwiper, recentSwiper;
+import { updateHeaderView } from "./user-details.js";
+
+/**
+ * Homepage script — server-driven, paginated product loading
+ */
 
 const elements = {
   categoryGrid: document.getElementById('categoriesGrid'),
@@ -30,58 +13,166 @@ const elements = {
   categoryDropdown: document.querySelector('.dropdown-options'),
   loadMoreBtn: document.getElementById('loadMoreBtn'),
   cartCount: document.querySelector('.cart-count'),
-  activeFilterBadge: document.getElementById('activeFilterBadge')
+  activeFilterBadge: document.getElementById('activeFilterBadge'),
+  searchInput: document.getElementById('searchInput'),
+  dropdownSelected: document.querySelector('.dropdown-selected')
 };
 
-async function initApp() {
-  elements.productGrid.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+let currency = "NGN";
+let allCategories = [];
+let allBrands = [];
 
+// Server-driven product state (we fetch pages rather than full list)
+const state = {
+  products: [],            // accumulated products for current filter (may be multiple pages)
+  currentPage: 0,          // last fetched page for current filter
+  perPage: 6,              // how many products to fetch per page from server (suits homepage)
+  visibleProducts: 6,      // how many cards to show initially (UI logic)
+  activeCategory: 'all',
+  totalProducts: 0,
+  totalPages: 1,
+  productSort: '-createdAt', // newest first
+  userRequestedSearch: '',   // search keyword if any
+  brandSwiper: null,
+  recentSwiper: null
+};
+
+/* ------------------------- helpers ------------------------- */
+
+const parseDecimal = (v) => {
+  if (v == null) return 0;
+  if (typeof v === 'object' && typeof v.$numberDecimal !== 'undefined') {
+    return parseFloat(v.$numberDecimal || 0) || 0;
+  }
+  if (typeof v === 'object' && typeof v.toString === 'function') {
+    const s = v.toString();
+    const n = parseFloat(s);
+    return Number.isFinite(n) ? n : 0;
+  }
+  return parseFloat(v) || 0;
+};
+
+const formatCurrency = (value) => {
+  const num = parseDecimal(value);
+  // using Intl with NGN — caller previously replaced 'NGN' with '₦', keep similar
+  return new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency: currency,
+    minimumFractionDigits: 2
+  }).format(num).replace('NGN', '₦');
+};
+
+async function fetchJson(endpoint, { showSpinner = false } = {}) {
   try {
-    allCategories = await fetchData('/api/categories');
-    allProducts = await fetchData('/api/products');
-    allBrands = await fetchData('/api/brands');
-
-    renderCategories();
-    renderProducts();
-    renderBrandFeature();
-    renderRecentProducts();
-
-    initEventListeners();
-    initSwipers();
-  } catch (error) {
-    console.error('Error initializing app:', error);
-
+    if (showSpinner) elements.productGrid.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+    const res = await fetch(endpoint);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json(); // { success, data, meta }
+  } catch (err) {
+    console.error('fetchJson error', err);
+    return { success: false, data: [], meta: {} };
+  } finally {
+    if (showSpinner) {
+      // leave grid empty or previous content; we don't force clearing here
+    }
   }
 }
 
-// Render categories in grid and dropdown
+/* ------------------------- rendering ------------------------- */
+
+function createProductCard(product) {
+  const price = product.price;
+  const formattedPrice = formatCurrency(price);
+
+  const rating = parseDecimal(product.ratings) || 0;
+
+  return `
+    <div class="product-card animate-fade" data-category="${product.category?._id || ''}">
+      <img src="${product.images?.mainImage?.url || 'assets/images/default-product.png'}" alt="${escapeHtml(product.name || '')}">
+      <h4>${escapeHtml(product.name || '')}</h4>
+      <p class="price">${formattedPrice}</p>
+      <div class="card-bottom">
+        <div class="rating"><i class="fas fa-star"></i> ${rating}</div>
+        <button class="btn-cart" type="button" data-id="${product._id}">Add To Cart</button>
+      </div>
+    </div>
+  `;
+}
+
+function createSwiperSlide(product) {
+  const price = product.price;
+  const formattedPrice = formatCurrency(price);
+  const rating = parseDecimal(product.ratings) || 0;
+
+  return `
+    <div class="swiper-slide product-card" data-category="${product.category?._id || ''}">
+      <img src="${product.images?.mainImage?.url || 'assets/images/default-product.png'}" alt="${escapeHtml(product.name || '')}">
+      <h4>${escapeHtml(product.name || '')}</h4>
+      <p class="price">${formattedPrice}</p>
+      <div class="card-bottom">
+        <span class="rating">⭐ ${rating}</span>
+        <button class="btn btn-cart" type="button" data-id="${product._id}">Add To Cart</button>
+      </div>
+    </div>
+  `;
+}
+
+function createRecentSlide(product) {
+  const price = product.price;
+  const formattedPrice = formatCurrency(price);
+  const rating = parseDecimal(product.ratings) || 0;
+
+  return `
+    <div class="swiper-slide">
+      <div class="product-card">
+        <img src="${product.images?.mainImage?.url || 'assets/images/default-product.png'}" alt="${escapeHtml(product.name || '')}">
+        <h4>${escapeHtml(product.name || '')}</h4>
+        <div class="price">${formattedPrice}</div>
+        <div class="card-bottom">
+          <span class="rating">★ ${rating}</span>
+          <button class="btn-cart" type="button" data-id="${product._id}">Add To Cart</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+/* ------------------------- categories & brands ------------------------- */
+
 function renderCategories() {
-  // Clear existing categories
+  if (!elements.categoryGrid || !elements.categoryDropdown) return;
   elements.categoryGrid.innerHTML = '';
   elements.categoryDropdown.innerHTML = '';
 
-  // Add "All" option
+  // All option (grid)
   const allGridOption = document.createElement('div');
   allGridOption.className = 'cat-box active';
   allGridOption.dataset.filter = 'all';
   allGridOption.textContent = 'All';
   elements.categoryGrid.appendChild(allGridOption);
 
+  // All option dropdown
   const allDropdownOption = document.createElement('li');
   allDropdownOption.dataset.value = 'all';
   allDropdownOption.textContent = 'All Categories';
   elements.categoryDropdown.appendChild(allDropdownOption);
 
-  // Add categories
   allCategories.forEach(category => {
-    // Category grid item
     const gridItem = document.createElement('div');
     gridItem.className = 'cat-box';
     gridItem.dataset.filter = category._id;
     gridItem.textContent = category.name;
     elements.categoryGrid.appendChild(gridItem);
 
-    // Dropdown option
     const dropdownItem = document.createElement('li');
     dropdownItem.dataset.value = category._id;
     dropdownItem.textContent = category.name;
@@ -89,433 +180,356 @@ function renderCategories() {
   });
 }
 
-// Create product card HTML
-function createProductCard(product) {
-  const price = product.price?.$numberDecimal || product.price || 0;
-  const formattedPrice = new Intl.NumberFormat('en-NG', {
-    style: 'currency',
-    currency: currency,
-    minimumFractionDigits: 2
-  }).format(price).replace('NGN', '₦');
-
-  const rating = product.ratings?.$numberDecimal || 0;
-
-  return `
-                <div class="product-card animate-fade" data-category="${product.category?._id || ''}">
-                    <img src="${product.images?.mainImage?.url || 'assets/images/default-product.png'}" alt="${product.name}">
-                    <h4>${product.name}</h4>
-                    <p class="price">${formattedPrice}</p>
-                    <div class="card-bottom">
-                        <div class="rating"><i class="fas fa-star"></i> ${rating}</div>
-                        <button class="btn-cart" type="button" data-id="${product._id}">Add To Cart</button>
-                    </div>
-                </div>
-            `;
-}
-
-// Create swiper slide HTML
-function createSwiperSlide(product) {
-  const price = product.price?.$numberDecimal || product.price || 0;
-  const formattedPrice = new Intl.NumberFormat('en-NG', {
-    style: 'currency',
-    currency: currency,
-    minimumFractionDigits: 2
-  }).format(price).replace('NGN', '₦');
-
-  const rating = product.ratings?.$numberDecimal || 0;
-
-  return `
-                <div class="swiper-slide product-card" data-category="${product.category?._id || ''}">
-                    <img src="${product.images?.mainImage?.url || 'assets/images/default-product.png'}" alt="${product.name}">
-                    <h4>${product.name}</h4>
-                    <p class="price">${formattedPrice}</p>
-                    <div class="card-bottom">
-                        <span class="rating">⭐ ${rating}</span>
-                        <button class="btn btn-cart" type="button" data-id="${product._id}">Add To Cart</button>
-                    </div>
-                </div>
-            `;
-}
-
-// Create recent product slide HTML
-function createRecentSlide(product) {
-  const price = product.price?.$numberDecimal || product.price || 0;
-  const formattedPrice = new Intl.NumberFormat('en-NG', {
-    style: 'currency',
-    currency: currency,
-    minimumFractionDigits: 2
-  }).format(price).replace('NGN', '₦');
-
-  const rating = product.ratings?.$numberDecimal || 0;
-
-  return `
-                <div class="swiper-slide">
-                    <div class="product-card">
-                        <img src="${product.images?.mainImage?.url || 'assets/images/default-product.png'}" alt="${product.name}">
-                        <h4>${product.name}</h4>
-                        <div class="price">${formattedPrice}</div>
-                        <div class="card-bottom">
-                            <span class="rating">★ ${rating}</span>
-                            <button class="btn-cart" type="button" data-id="${product._id}">Add To Cart</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-}
-
-// Render products in featured section
-function renderProducts() {
-  elements.productGrid.innerHTML = '';
-
-  if (allProducts.length === 0) {
-    elements.productGrid.innerHTML = `
-                    <div class="no-products">
-                        <i class="fas fa-tools"></i>
-                        <p>No products found</p>
-                    </div>
-                `;
-    return;
-  }
-
-  // Filter products based on active category
-  if (activeCategory === 'all') {
-    filteredProducts = [...allProducts];
-  } else {
-    filteredProducts = allProducts.filter(product =>
-      product.category?._id === activeCategory
-    );
-  }
-
-  // Update active filter badge
-  if (activeCategory !== 'all') {
-    const activeCategoryObj = allCategories.find(cat => cat._id === activeCategory);
-    elements.activeFilterBadge.textContent = activeCategoryObj?.name || '';
-  } else {
-    elements.activeFilterBadge.textContent = '';
-  }
-
-  // Check if no products in this category
-  if (filteredProducts.length === 0) {
-    elements.productGrid.innerHTML = `
-                    <div class="error-message">
-                        <i class="fas fa-exclamation-circle"></i>
-                        <p>No products found in this category</p>
-                    </div>
-                `;
-    elements.loadMoreBtn.style.display = 'none';
-    return;
-  }
-
-  // Add initial products
-  const productsToShow = filteredProducts.slice(0, visibleProducts);
-
-  productsToShow.forEach(product => {
-    elements.productGrid.innerHTML += createProductCard(product);
-  });
-
-  // Update load more button
-  if (filteredProducts.length > visibleProducts) {
-    elements.loadMoreBtn.style.display = 'block';
-  } else {
-    elements.loadMoreBtn.style.display = 'none';
-  }
-
-  // Animate visible cards
-  animateProductCards();
-}
-
-// Render brand feature section
-function renderBrandFeature() {
+function renderBrandFeature(products) {
+  if (!elements.brandSwiperWrapper) return;
   elements.brandSwiperWrapper.innerHTML = '';
+  const brandName = document.querySelector('.brand-name')?.textContent || '';
 
-  // Get the brand name from the hero section (iNGCO)
-  const brandName = document.querySelector('.brand-name').textContent.replace('iNG', 'iNG').replace('CO', 'CO');
+  // Attempt to find the brand by name; fallback to top brands slice
+  let brandProducts = [];
+  const foundBrand = allBrands.find(b => (brandName && b.name && b.name.includes(brandName.trim())));
 
-  // Find the brand in our brands list
-  const brand = allBrands.find(b => b.name.includes('iNGCO'));
-
-  // Filter products by brand (if found)
-  const brandProducts = brand
-    ? allProducts.filter(p => p.brand?._id === brand._id)
-    : allProducts.slice(0, 3);
-
-  // Add slides
-  brandProducts.slice(0, 3).forEach(product => {
-    elements.brandSwiperWrapper.innerHTML += createSwiperSlide(product);
-  });
-
-  // Reinitialize swiper
-  if (brandSwiper) {
-    brandSwiper.destroy(true, true);
+  if (foundBrand) {
+    brandProducts = products.filter(p => p.brand?._id === foundBrand._id).slice(0, 3);
   }
+  if (!brandProducts.length) {
+    brandProducts = products.slice(0, 3);
+  }
+
+  brandProducts.forEach(p => elements.brandSwiperWrapper.innerHTML += createSwiperSlide(p));
+
+  // init or restart swiper
+  if (state.brandSwiper && typeof state.brandSwiper.destroy === 'function') state.brandSwiper.destroy(true, true);
   initBrandSwiper();
 }
 
-// Render recent products
-function renderRecentProducts() {
+function renderRecentProducts(products) {
+  if (!elements.recentSwiperWrapper) return;
   elements.recentSwiperWrapper.innerHTML = '';
 
-  // Get recent products (last 12 added)
-  const recentProducts = [...allProducts].reverse().slice(0, 12);
+  // We assume 'products' are sorted newest-first from server (default)
+  const recentProducts = (products || []).slice(0, 12);
 
-  // Add slides
-  recentProducts.forEach(product => {
-    elements.recentSwiperWrapper.innerHTML += createRecentSlide(product);
-  });
+  recentProducts.forEach(p => elements.recentSwiperWrapper.innerHTML += createRecentSlide(p));
 
-  // Reinitialize swiper
-  if (recentSwiper) {
-    recentSwiper.destroy(true, true);
-  }
+  if (state.recentSwiper && typeof state.recentSwiper.destroy === 'function') state.recentSwiper.destroy(true, true);
   initRecentSwiper();
 }
 
-// Initialize swiper sliders
-function initBrandSwiper() {
-  brandSwiper = new Swiper(".mySwiper", {
-    slidesPerView: 1.2,
-    spaceBetween: 20,
-    loop: true,
-    pagination: {
-      el: ".swiper-pagination",
-      clickable: true,
-    },
-    breakpoints: {
-      640: {
-        slidesPerView: 1.5,
-      },
-      768: {
-        slidesPerView: 2,
-      },
-      1024: {
-        slidesPerView: 2.5,
-      },
-    },
-  });
+/* ------------------------- product fetching & rendering ------------------------- */
+
+/**
+ * Build query string from state
+ */
+function buildProductQuery({ page = 1, perPage = state.perPage } = {}) {
+  const params = new URLSearchParams();
+  params.set('page', page);
+  params.set('limit', perPage);
+  if (state.activeCategory && state.activeCategory !== 'all') params.set('category', state.activeCategory);
+  if (state.userRequestedSearch) params.set('search', state.userRequestedSearch);
+  if (state.productSort) params.set('sort', state.productSort);
+  return params.toString();
 }
 
-function initRecentSwiper() {
-  recentSwiper = new Swiper(".recent-swiper", {
-    slidesPerView: 1,
-    spaceBetween: 20,
-    loop: true,
-    pagination: {
-      el: ".swiper-pagination",
-      clickable: true,
-    },
-    navigation: {
-      nextEl: ".swiper-button-next",
-      prevEl: ".swiper-button-prev",
-    },
-    breakpoints: {
-      640: {
-        slidesPerView: 2,
-      },
-      768: {
-        slidesPerView: 3,
-      },
-      1024: {
-        slidesPerView: 4,
-      },
-    },
-  });
+/**
+ * Fetch the next page of products for the current filter and append to state.products
+ */
+async function fetchNextProductsPage() {
+  const nextPage = state.currentPage + 1;
+  if (nextPage > state.totalPages) return false;
+
+  const q = buildProductQuery({ page: nextPage });
+  const resp = await fetchJson(`/api/products?${q}`, { showSpinner: false });
+  if (!resp.success) return false;
+
+  const pageItems = Array.isArray(resp.data) ? resp.data : [];
+  state.products = state.products.concat(pageItems);
+  state.currentPage = resp.meta?.page ?? nextPage;
+  state.totalProducts = resp.meta?.total ?? state.totalProducts;
+  state.totalPages = resp.meta?.pages ?? state.totalPages;
+  return pageItems.length > 0;
 }
 
-// Initialize event listeners
+/**
+ * Load first page (or fresh page when filters/search changes)
+ */
+async function loadFirstProductsPage() {
+  const q = buildProductQuery({ page: 1 });
+  const resp = await fetchJson(`/api/products?${q}`, { showSpinner: true });
+  if (!resp.success) {
+    state.products = [];
+    state.currentPage = 0;
+    state.totalProducts = 0;
+    state.totalPages = 1;
+    renderProducts(); // will show no products
+    return;
+  }
+
+  state.products = Array.isArray(resp.data) ? resp.data : [];
+  state.currentPage = resp.meta?.page ?? 1;
+  state.totalProducts = resp.meta?.total ?? state.products.length;
+  state.totalPages = resp.meta?.pages ?? Math.max(1, Math.ceil(state.totalProducts / state.perPage));
+}
+
+/**
+ * Render products area using accumulated state.products and visibleProducts
+ */
+function renderProducts() {
+  if (!elements.productGrid) return;
+  elements.productGrid.innerHTML = '';
+
+  if (!state.products || state.products.length === 0) {
+    elements.productGrid.innerHTML = `
+      <div class="no-products">
+        <i class="fas fa-tools"></i>
+        <p>No products found</p>
+      </div>`;
+    elements.loadMoreBtn && (elements.loadMoreBtn.style.display = 'none');
+    return;
+  }
+
+  // if a search was performed we might want to use filtered subset — but server already filtered
+  const productsToShow = state.products.slice(0, state.visibleProducts);
+
+  elements.productGrid.innerHTML = productsToShow.map(p => createProductCard(p)).join('');
+
+  // show/hide load more —load more will fetch next server page if necessary
+  if (state.visibleProducts < Math.min(state.totalProducts, state.products.length) || state.currentPage < state.totalPages) {
+    elements.loadMoreBtn && (elements.loadMoreBtn.style.display = 'block');
+  } else {
+    elements.loadMoreBtn && (elements.loadMoreBtn.style.display = 'none');
+  }
+
+  // Update activeFilterBadge (category)
+  if (state.activeCategory && state.activeCategory !== 'all') {
+    const cat = allCategories.find(c => c._id === state.activeCategory);
+    elements.activeFilterBadge && (elements.activeFilterBadge.textContent = cat?.name || '');
+  } else {
+    elements.activeFilterBadge && (elements.activeFilterBadge.textContent = '');
+  }
+
+  animateProductCards();
+}
+
+/* ------------------------- events ------------------------- */
+
 function initEventListeners() {
-  // Load more button
-  elements.loadMoreBtn?.addEventListener('click', () => {
-    visibleProducts += 6;
+  // Load more logic: when clicked, show more or fetch next page then show
+  elements.loadMoreBtn?.addEventListener('click', async () => {
+    state.visibleProducts += state.perPage; // show more cards locally
+
+    // If visibleProducts exceeds currently fetched products and server has more pages, fetch next
+    if (state.visibleProducts > state.products.length && state.currentPage < state.totalPages) {
+      await fetchNextProductsPage();
+    }
+
     renderProducts();
   });
 
-  // Category filtering
-  document.querySelectorAll('.cat-box').forEach(box => {
-    box.addEventListener('click', () => {
-      activeCategory = box.dataset.filter;
-      visibleProducts = 6; // Reset visible products
+  // Category filtering (grid boxes)
+  // dynamic binding: delegate clicks on categoryGrid
+  elements.categoryGrid?.addEventListener('click', async (e) => {
+    const box = e.target.closest('.cat-box');
+    if (!box) return;
+    const newCat = box.dataset.filter || 'all';
+    if (newCat === state.activeCategory) return;
 
-      // Update active class
-      document.querySelectorAll('.cat-box').forEach(b => b.classList.remove('active'));
-      box.classList.add('active');
+    state.activeCategory = newCat;
+    state.visibleProducts = state.perPage;
+    // update active class
+    document.querySelectorAll('.cat-box').forEach(b => b.classList.remove('active'));
+    box.classList.add('active');
+    elements.dropdownSelected && (elements.dropdownSelected.textContent = box.textContent);
 
-      // Update dropdown
-      document.querySelector('.dropdown-selected').textContent = box.textContent;
+    // fetch fresh page from server for this category
+    await loadFirstProductsPage();
+    renderProducts();
 
-      // Filter products
-      renderProducts();
+    // update brand feature / recent with new data
+    renderBrandFeature(state.products);
+    renderRecentProducts(state.products);
+  });
+
+  // Dropdown options (category)
+  elements.categoryDropdown?.addEventListener('click', async (e) => {
+    const li = e.target.closest('li');
+    if (!li) return;
+    const newCat = li.dataset.value || 'all';
+    state.activeCategory = newCat;
+    state.visibleProducts = state.perPage;
+    elements.dropdownSelected && (elements.dropdownSelected.textContent = li.textContent);
+
+    // update active class in grid
+    document.querySelectorAll('.cat-box').forEach(box => {
+      box.classList.toggle('active', box.dataset.filter === newCat);
     });
+
+    await loadFirstProductsPage();
+    renderProducts();
+    renderBrandFeature(state.products);
+    renderRecentProducts(state.products);
   });
 
-  // Dropdown filtering
-  document.querySelectorAll('.dropdown-options li').forEach(option => {
-    option.addEventListener('click', () => {
-      activeCategory = option.dataset.value;
-      visibleProducts = 6; // Reset visible products
+  // Search UI
+  document.querySelector('.search-bar button')?.addEventListener('click', async () => {
+    const kw = elements.searchInput?.value?.trim() || '';
+    state.userRequestedSearch = kw;
+    state.visibleProducts = state.perPage;
+    await loadFirstProductsPage();
+    renderProducts();
+    renderBrandFeature(state.products);
+    renderRecentProducts(state.products);
+  });
 
-      // Update dropdown
-      document.querySelector('.dropdown-selected').textContent = option.textContent;
-
-      // Update active category box
-      document.querySelectorAll('.cat-box').forEach(box => {
-        box.classList.remove('active');
-        if (box.dataset.filter === activeCategory) {
-          box.classList.add('active');
-        }
-      });
-
-      // Filter products
+  elements.searchInput?.addEventListener('keypress', async (e) => {
+    if (e.key === 'Enter') {
+      const kw = elements.searchInput.value.trim();
+      state.userRequestedSearch = kw;
+      state.visibleProducts = state.perPage;
+      await loadFirstProductsPage();
       renderProducts();
-    });
+      renderBrandFeature(state.products);
+      renderRecentProducts(state.products);
+    }
   });
 
-  // Search functionality
-  document.querySelector('.search-bar button').addEventListener('click', searchProducts);
-  document.getElementById('searchInput').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') searchProducts();
-  });
-
-  // Add to cart functionality
+  // Add to cart (delegated)
   document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('btn-cart')) {
-      addToCart(e.target.dataset.id);
+    const btn = e.target.closest('.btn-cart');
+    if (btn) {
+      addToCart(btn.dataset.id);
     }
   });
 }
 
-// Search products
-function searchProducts() {
-  const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
+/* ------------------------- cart ------------------------- */
 
-  if (keyword === '') {
-    // Reset to all products
-    activeCategory = 'all';
-    visibleProducts = 6;
-    document.querySelectorAll('.cat-box').forEach(b => {
-      b.classList.remove('active');
-      if (b.dataset.filter === 'all') b.classList.add('active');
-    });
-    document.querySelector('.dropdown-selected').textContent = 'All Categories';
-    renderProducts();
-    return;
-  }
-
-  // Filter products by keyword
-  filteredProducts = allProducts.filter(product =>
-    product.name.toLowerCase().includes(keyword) ||
-    (product.description && product.description.toLowerCase().includes(keyword))
-  );
-
-  // Update UI
-  elements.activeFilterBadge.textContent = `Search: "${keyword}"`;
-  visibleProducts = 6;
-  renderProducts();
-}
-
-// Add to cart functionality
 function addToCart(productId) {
-  // Find the product
-  const product = allProducts.find(p => p._id === productId);
+  const product = state.products.find(p => p._id === productId) || []; // if not loaded, you'll want to refetch product detail in future
   if (!product) return;
 
-  // Get existing cart or create new
   let cart = JSON.parse(localStorage.getItem('cart')) || [];
+  const existing = cart.find(i => i.id === productId);
+  if (existing) existing.quantity += 1;
+  else cart.push({
+    id: productId,
+    name: product.name,
+    price: product.price?.$numberDecimal || product.price,
+    image: product.images?.mainImage?.url || '',
+    quantity: 1
+  });
 
-  // Check if product already in cart
-  const existingItem = cart.find(item => item.id === productId);
-
-  if (existingItem) {
-    existingItem.quantity += 1;
-  } else {
-    cart.push({
-      id: productId,
-      name: product.name,
-      price: product.price?.$numberDecimal || product.price,
-      image: product.images?.mainImage?.url,
-      quantity: 1
-    });
-  }
-
-  // Save to localStorage
   localStorage.setItem('cart', JSON.stringify(cart));
-
-  // Update cart count
   updateCartCount();
-
-  // Show feedback
   showAddToCartFeedback();
 }
 
-// Update cart count
 function updateCartCount() {
   const cart = JSON.parse(localStorage.getItem('cart')) || [];
-  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-  elements.cartCount.textContent = totalItems;
+  const total = cart.reduce((s, it) => s + (it.quantity || 0), 0);
+  elements.cartCount && (elements.cartCount.textContent = total);
 }
 
-// Show add to cart feedback
 function showAddToCartFeedback() {
   const feedback = document.createElement('div');
   feedback.className = 'cart-feedback';
-  feedback.innerHTML = `
-                <i class="fas fa-check-circle"></i> Added to cart!
-            `;
-
+  feedback.innerHTML = `<i class="fas fa-check-circle"></i> Added to cart!`;
   document.body.appendChild(feedback);
-
-  setTimeout(() => {
-    feedback.classList.add('show');
-  }, 10);
-
+  setTimeout(() => feedback.classList.add('show'), 10);
   setTimeout(() => {
     feedback.classList.remove('show');
-    setTimeout(() => {
-      document.body.removeChild(feedback);
-    }, 300);
+    setTimeout(() => feedback.remove(), 300);
   }, 2000);
 }
 
-// Animate product cards
+/* ------------------------- animation & swipers ------------------------- */
+
 function animateProductCards() {
   const productCards = document.querySelectorAll('.product-card.animate-fade');
-  const observer = new IntersectionObserver(entries => {
+  const obs = new IntersectionObserver(entries => {
     entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('visible');
-      }
+      if (entry.isIntersecting) entry.target.classList.add('visible');
     });
   }, { threshold: 0.1 });
-
-  productCards.forEach(card => observer.observe(card));
+  productCards.forEach(c => obs.observe(c));
 }
 
-// Initialize the app when DOM is loaded
-document.addEventListener('DOMContentLoaded', async () => {
+function initBrandSwiper() {
+  // ensure Swiper is available on the page
+  if (typeof Swiper === 'undefined') return;
+  state.brandSwiper = new Swiper(".mySwiper", {
+    slidesPerView: 1.2,
+    spaceBetween: 20,
+    loop: true,
+    pagination: { el: ".swiper-pagination", clickable: true },
+    breakpoints: { 640: { slidesPerView: 1.5 }, 768: { slidesPerView: 2 }, 1024: { slidesPerView: 2.5 } }
+  });
+}
 
-  updateHeaderView();
-  // const { ipapi } = await useapi();
-  // currency = ipapi.currency
-  // Initialize app
-  initApp();
+function initRecentSwiper() {
+  if (typeof Swiper === 'undefined') return;
+  state.recentSwiper = new Swiper(".recent-swiper", {
+    slidesPerView: 1,
+    spaceBetween: 20,
+    loop: true,
+    pagination: { el: ".swiper-pagination", clickable: true },
+    navigation: { nextEl: ".swiper-button-next", prevEl: ".swiper-button-prev" },
+    breakpoints: { 640: { slidesPerView: 2 }, 768: { slidesPerView: 3 }, 1024: { slidesPerView: 4 } }
+  });
+}
 
-  // Update cart count
-  updateCartCount();
+/* ------------------------- init / boot ------------------------- */
 
-  // Existing functionality from your code
-  initMenuToggle();
-  initSmoothScroll();
-  initDropdown();
-  initScrollReveal();
-  initScrollToTop();
-  updateYear();
-});
+async function initApp() {
+  elements.productGrid && (elements.productGrid.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>');
 
-// Existing functions from your code (with minor adjustments)
+  try {
+    // header
+    updateHeaderView();
+
+    // categories & brands (small, safe to load all)
+    const catsResp = await fetchJson('/api/categories', { showSpinner: false });
+    allCategories = catsResp.success ? catsResp.data : [];
+
+    const brandsResp = await fetchJson('/api/brands', { showSpinner: false });
+    allBrands = brandsResp.success ? brandsResp.data : [];
+
+    renderCategories();
+
+    // load first page of products (server-side paging) using current activeCategory/search
+    await loadFirstProductsPage();
+
+    // render UI pieces
+    renderProducts();
+    renderBrandFeature(state.products);
+    renderRecentProducts(state.products);
+
+    // listeners and extra UI behavior
+    initEventListeners();
+    initMenuToggle();
+    initSmoothScroll();
+    initDropdown();
+    initScrollReveal();
+    initScrollToTop();
+    updateYear();
+
+    // set cart count
+    updateCartCount();
+
+  } catch (err) {
+    console.error('initApp error', err);
+    if (elements.productGrid) {
+      elements.productGrid.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-circle"></i><p>Failed to load products</p></div>`;
+    }
+  }
+}
+
+/* ------------------------- misc UI helpers (menu, dropdown, scroll) ------------------------- */
+
 function initMenuToggle() {
   const toggle = document.getElementById("menu-toggle");
   const navMenu = document.getElementById("nav-menu");
   const menuIcon = document.getElementById("menu-icon");
-
   toggle?.addEventListener("click", () => {
     navMenu.classList.toggle("active");
     menuIcon.classList.toggle("fa-bars");
@@ -527,14 +541,8 @@ function initSmoothScroll() {
   document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener("click", function(e) {
       e.preventDefault();
-      const targetId = this.getAttribute("href");
-      const targetElement = document.querySelector(targetId);
-      if (targetElement) {
-        targetElement.scrollIntoView({
-          behavior: "smooth",
-          block: "start"
-        });
-      }
+      const target = document.querySelector(this.getAttribute("href"));
+      if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   });
 }
@@ -542,80 +550,37 @@ function initSmoothScroll() {
 function initDropdown() {
   const dropdown = document.getElementById("categoryDropdown");
   if (!dropdown) return;
-
   const selected = dropdown.querySelector(".dropdown-selected");
   const options = dropdown.querySelectorAll(".dropdown-options li");
-
-  selected.addEventListener("click", () => {
-    dropdown.classList.toggle("open");
-  });
-
-  options.forEach(option => {
-    option.addEventListener("click", () => {
-      selected.textContent = option.textContent;
-      dropdown.classList.remove("open");
-    });
-  });
-
-  document.addEventListener("click", (e) => {
-    if (!dropdown.contains(e.target)) {
-      dropdown.classList.remove("open");
-    }
-  });
+  selected?.addEventListener("click", () => dropdown.classList.toggle("open"));
+  options.forEach(option => option.addEventListener("click", () => {
+    selected.textContent = option.textContent;
+    dropdown.classList.remove("open");
+  }));
+  document.addEventListener("click", (e) => { if (!dropdown.contains(e.target)) dropdown.classList.remove("open"); });
 }
 
 function initScrollReveal() {
   const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add("visible");
-      }
-    });
+    entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add("visible"); });
   }, { threshold: 0.1 });
-
   document.querySelectorAll(".animate-fade-in, .animate-up").forEach(el => observer.observe(el));
 }
 
 function initScrollToTop() {
   const scrollTopBtn = document.getElementById("scrollTopBtn");
-
-  window.onscroll = function() {
-    if (scrollTopBtn) {
-      scrollTopBtn.style.display = (document.documentElement.scrollTop > 300) ? "block" : "none";
-    }
-  };
-
-  scrollTopBtn?.addEventListener("click", function() {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  });
+  window.onscroll = function() { if (scrollTopBtn) scrollTopBtn.style.display = (document.documentElement.scrollTop > 300) ? "block" : "none"; };
+  scrollTopBtn?.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
 }
-
-// footer section
-// Reveal on scroll
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      entry.target.classList.add('visible');
-    }
-  });
-}, { threshold: 0.1 });
-
-document.querySelectorAll('.animate-fade').forEach(el => observer.observe(el));
-
-// Scroll to Top Button
-const scrollTopBtn = document.getElementById("scrollTopBtn");
-
-window.onscroll = function() {
-  scrollTopBtn.style.display = (document.documentElement.scrollTop > 300) ? "block" : "none";
-};
-
-scrollTopBtn.onclick = function() {
-  window.scrollTo({ top: 0, behavior: "smooth" });
-};
-
-
 
 function updateYear() {
-  document.getElementById("year").textContent = new Date().getFullYear();
+  const el = document.getElementById("year");
+  if (el) el.textContent = new Date().getFullYear();
 }
+
+/* ------------------------- boot ------------------------- */
+
+document.addEventListener('DOMContentLoaded', async () => {
+  await initApp();
+});
 
