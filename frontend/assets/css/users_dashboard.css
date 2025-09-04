@@ -36,9 +36,10 @@ body {
     z-index: 1000;
 }
 
-.logo-img{
+.logo-img {
     width: 40px;
     height: 40px;
+    margin-right: 10px;
 }
 
 .sticky-header .container {
@@ -231,6 +232,12 @@ body {
 
 .user-profile.active .profile-dropdown {
     display: block;
+}
+
+@media (max-width: 768px) {
+    .user-profle {
+        gap: unset;
+    }
 }
 
 /* Dashboard Main */

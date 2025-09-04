@@ -247,7 +247,7 @@ body {
   transition: transform 0.3s ease;
   box-sizing: border-box;
   padding-bottom: 20px;
-  z-index: 900;
+  z-index: 1;
 }
 
 .sidebar-list {
@@ -725,6 +725,7 @@ body {
   padding: 60px 20px 80px;
   font-family: var(--body-font);
   position: relative;
+  z-index: 4;
 }
 
 .footer-container {
