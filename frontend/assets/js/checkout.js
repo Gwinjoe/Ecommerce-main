@@ -192,6 +192,31 @@ document.addEventListener("DOMContentLoaded", async () => {
       applyCouponBtn.disabled = false;
     }
   };
+  const orderData = {
+    customer: {
+      userId: currentUser?._id || null,
+      name: document.getElementById("full-name").value,
+      email: document.getElementById("email").value,
+      address: document.getElementById("address").value,
+      city: document.getElementById("city").value,
+      phone: document.getElementById("phone").value,
+      state: document.getElementById("state").value,
+      country: document.getElementById("country").value,
+      postalCode: document.getElementById("postal-code").value || "",
+    },
+    items: cart,
+    coupon: couponInput.value.trim() || null,
+    totalPrice: calculateTotals(),
+    payment: {
+      method: "flutterwave"
+    }
+  };
+
+
+  // Sending side
+  const jsonString = JSON.stringify(orderData);
+  const encodedString = encodeURIComponent(jsonString);
+
 
   // Complete order after successful payment
   const completeOrder = async (paymentReference, transactionId) => {
@@ -238,7 +263,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         updateCartCount();
 
         // Redirect to success page
-        window.location.href = "/order-success";
+        // window.location.href = "/order-success";
       } else {
         throw new Error(data.message || "Failed to create order");
       }
@@ -270,7 +295,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       amount: totals.total,
       currency: "NGN",
       payment_options: "card, banktransfer, ussd",
-      redirect_url: "",
+      redirect_url: `/order-success?data=${encodedString}`,
       customer: {
         email: customerEmail,
         name: customerName,
