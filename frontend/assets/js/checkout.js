@@ -214,13 +214,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     };
   }
-
-  const orderData = getOrderData();
-
-  // Sending side
-  const jsonString = JSON.stringify(orderData);
-  const encodedString = encodeURIComponent(jsonString);
-
+  //
+  // const orderData = getOrderData();
+  //
+  // // Sending side
+  // const jsonString = JSON.stringify(orderData);
+  // const encodedString = encodeURIComponent(jsonString);
+  //
 
   // Complete order after successful payment
   const completeOrder = async (paymentReference, transactionId) => {
@@ -311,9 +311,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         description: `Payment for ${cart.length} items`,
         logo: "assets/images/swisstools_logo.png",
       },
-      callback: function(response) {
+      callback: async function(response) {
         if (response.status === "successful") {
-          completeOrder(txRef, response.transaction_id);
+          await completeOrder(txRef, response.transaction_id);
         } else {
           alert("Payment failed. Please try again.");
           document.body.removeChild(loader);

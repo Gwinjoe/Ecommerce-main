@@ -150,7 +150,8 @@ exports.add_order = async (req, res) => {
       existingUser.address = {
         address, country, city, postalCode: postalCode ? postalCode : "", state
       }
-      await existingUser.save();
+      const result = await existingUser.save();
+      userId = result._id;
     }
     const products = items.map((item) => { return { product: item.id, quantity: item.quantity, totalPrice: item.price * item.quantity } }) || [];
     const newOrder = await new Orders({
