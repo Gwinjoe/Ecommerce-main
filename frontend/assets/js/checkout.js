@@ -193,6 +193,35 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   };
 
+  const getOrderData = () => {
+    return {
+      customer: {
+        userId: currentUser?._id || null,
+        name: document.getElementById("full-name").value,
+        email: document.getElementById("email").value,
+        address: document.getElementById("address").value,
+        city: document.getElementById("city").value,
+        phone: document.getElementById("phone").value,
+        state: document.getElementById("state").value,
+        country: document.getElementById("country").value,
+        postalCode: document.getElementById("postal-code").value || "",
+      },
+      items: cart,
+      coupon: couponInput.value.trim() || null,
+      totalPrice: calculateTotals(),
+      payment: {
+        method: "flutterwave"
+      }
+    };
+  }
+
+  const orderData = getOrderData();
+
+  // Sending side
+  const jsonString = JSON.stringify(orderData);
+  const encodedString = encodeURIComponent(jsonString);
+
+
   // Complete order after successful payment
   const completeOrder = async (paymentReference, transactionId) => {
     try {
@@ -255,6 +284,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Initialize Flutterwave payment
   const initiatePayment = async () => {
+
     const config = await fetch("/api/config");
     const { flwpubkey } = await config.json();
     const totals = calculateTotals();
