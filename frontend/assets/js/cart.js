@@ -7,7 +7,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const cartItemsContainer = document.querySelector(".cart-items");
   const cartCountElement = document.querySelector(".cart-count");
   const cartSummary = document.querySelector(".cart-summary");
-  const shippingCost = 1000.00;
 
   function updateCartCount() {
     const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
@@ -84,12 +83,12 @@ document.addEventListener("DOMContentLoaded", () => {
       return sum + (parseFloat(item.price) * (item.quantity || 1));
     }, 0);
 
-    const total = subtotal + shippingCost;
+    const total = subtotal;
 
     document.querySelector(".summary-details p:nth-child(1) span:last-child").textContent =
       formatCurrency(subtotal);
-    document.querySelector(".summary-details p:nth-child(2) span:last-child").textContent =
-      formatCurrency(shippingCost);
+    //document.querySelector(".summary-details p:nth-child(2) span:last-child").textContent =
+    // formatCurrency(shippingCost);
     document.querySelector(".summary-total").textContent =
       formatCurrency(total);
   }

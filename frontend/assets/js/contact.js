@@ -55,6 +55,21 @@ document.querySelector(".submit-btn").addEventListener("click", (e) => {
       duration: 0.5,
       onComplete: () => {
         alert("Message sent successfully!");
+        function sendMailtoEmail() {
+          const recipient = "support@swisstools.store";
+          const name = document.querySelector("#name").value;
+          const subject = document.querySelector("#subject").value;
+          const bodyValue = document.querySelector("#body").value;
+
+          const body = `${name},\n\n ${bodyValue}`
+          const encodedSubject = encodeURIComponent(subject);
+          const encodedBody = encodeURIComponent(body);
+
+          const mailtoLink = `mailto:${recipient}?subject=${encodedSubject}&body=${encodedBody}`;
+
+          window.location.href = mailtoLink;
+        }
+        sendMailtoEmail()
         inputs.forEach(input => (input.value = ""));
         gsap.to(".form-container", { opacity: 1, duration: 0.5 });
       }
