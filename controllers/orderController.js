@@ -163,7 +163,7 @@ exports.add_order = async (req, res) => {
     })
 
     const result = await newOrder.save();
-    const html = "";
+    let html = "";
     items.forEach((item) => {
       const h = `<li>${item.name} x${item.quantity}</li>`
       html += h

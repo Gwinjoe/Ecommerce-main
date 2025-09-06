@@ -192,26 +192,30 @@ document.addEventListener("DOMContentLoaded", async () => {
       applyCouponBtn.disabled = false;
     }
   };
-  const orderData = {
-    customer: {
-      userId: currentUser?._id || null,
-      name: document.getElementById("full-name").value,
-      email: document.getElementById("email").value,
-      address: document.getElementById("address").value,
-      city: document.getElementById("city").value,
-      phone: document.getElementById("phone").value,
-      state: document.getElementById("state").value,
-      country: document.getElementById("country").value,
-      postalCode: document.getElementById("postal-code").value || "",
-    },
-    items: cart,
-    coupon: couponInput.value.trim() || null,
-    totalPrice: calculateTotals(),
-    payment: {
-      method: "flutterwave"
-    }
-  };
 
+  const getOrderData = () => {
+    return {
+      customer: {
+        userId: currentUser?._id || null,
+        name: document.getElementById("full-name").value,
+        email: document.getElementById("email").value,
+        address: document.getElementById("address").value,
+        city: document.getElementById("city").value,
+        phone: document.getElementById("phone").value,
+        state: document.getElementById("state").value,
+        country: document.getElementById("country").value,
+        postalCode: document.getElementById("postal-code").value || "",
+      },
+      items: cart,
+      coupon: couponInput.value.trim() || null,
+      totalPrice: calculateTotals(),
+      payment: {
+        method: "flutterwave"
+      }
+    };
+  }
+
+  const orderData = getOrderData();
 
   // Sending side
   const jsonString = JSON.stringify(orderData);
@@ -263,7 +267,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         updateCartCount();
 
         // Redirect to success page
-        // window.location.href = "/order-success";
+        window.location.href = "/order-success";
       } else {
         throw new Error(data.message || "Failed to create order");
       }
@@ -280,6 +284,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Initialize Flutterwave payment
   const initiatePayment = async () => {
+
     const config = await fetch("/api/config");
     const { flwpubkey } = await config.json();
     const totals = calculateTotals();
@@ -295,7 +300,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       amount: totals.total,
       currency: "NGN",
       payment_options: "card, banktransfer, ussd",
-      redirect_url: `/order-success?data=${encodedString}`,
+      redirect_url: "",
       customer: {
         email: customerEmail,
         name: customerName,

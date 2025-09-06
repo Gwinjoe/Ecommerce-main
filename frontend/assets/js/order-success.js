@@ -53,7 +53,7 @@ const completeOrder = async (paymentReference, transactionId) => {
       updateCartCount();
 
       // Redirect to success page
-      // window.location.href = "/order-success";
+      window.location.href = "/order-success";
     } else {
       throw new Error(data.message || "Failed to create order");
     }
