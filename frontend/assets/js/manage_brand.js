@@ -2,12 +2,13 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import showStatusModal from "./modal.js";
 import { loadingIndicator } from "./loader.js";
+import { updateHeader } from "./user-details.js"
 
 gsap.registerPlugin(ScrollTrigger);
 
 // Sample categories data (replace with actual data from your backend)
 
-
+updateHeader();
 
 const response = await fetch("/api/brands");
 const { data } = await response.json();
