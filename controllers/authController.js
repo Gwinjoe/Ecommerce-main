@@ -88,15 +88,15 @@ exports.signout = async (req, res) => {
 }
 
 exports.verifyUser = async (req, res) => {
-  const { id } = req.query;
+  const { id } = req.params;
   try {
     const existingUser = await User.findById(id)
     if (!existingUser) {
       return res.status(401).json({ success: false, message: "User not found" })
     }
-
-    existingUser.verified = true
-
+    if (!existingUser.verified) {
+      existingUser.verified = true
+    }
     const result = await existingUser.save();
     res.status(200).redirect("/dashboard");
   } catch (err) {

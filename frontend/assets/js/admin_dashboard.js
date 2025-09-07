@@ -1,4 +1,8 @@
+import { updateHeader } from "./user-details.js"
+
+
 document.addEventListener('DOMContentLoaded', function() {
+  updateHeader();
   const socket = io();
   const connectionStatus = document.createElement('div');
   connectionStatus.className = 'connection-status disconnected';

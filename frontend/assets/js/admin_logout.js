@@ -1,5 +1,5 @@
 import { gsap } from "gsap";
-
+import { updateHeader } from "./user-details.js"
 // Log script loading for debugging
 console.log("logout.js loaded");
 
@@ -14,6 +14,7 @@ function trackEvent(eventName, eventParams = {}) {
 
 document.addEventListener("DOMContentLoaded", () => {
   console.log("DOMContentLoaded fired");
+  updateHeader();
 
   // Confirm logout button handler
   const confirmBtn = document.querySelector(".confirm-btn");
