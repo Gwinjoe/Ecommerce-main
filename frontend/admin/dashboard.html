@@ -13,7 +13,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap"
     rel="stylesheet">
-    <link rel="icon" type="image/x-icon" href="assets/images/swisstools_logo.png">
+  <link rel="icon" type="image/x-icon" href="assets/images/swisstools_logo.png">
   <!-- Font Awesome CDN -->
   <script src="https://kit.fontawesome.com/744870fa52.js" crossorigin="anonymous"></script>
   <!-- Chart.js CDN -->
@@ -63,10 +63,14 @@
             <span class="profile-status">Active</span>
           </div>
           <ul class="profile-dropdown">
-            <li><a href="/admin"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
-            <li><a href="/admin/users"><i class="fas fa-users"></i> Manage Users</a></li>
-            <li><a href="/admin/categories"><i class="fas fa-tags"></i> Categories</a></li>
-            <li><a href="/admin/logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+            <li><a href="/admin"><i class="fas fa-tachometer-alt"></i>
+                Dashboard</a></li>
+            <li><a href="/admin/users"><i class="fas fa-users"></i>
+                Manage Users</a></li>
+            <li><a href="/admin/categories"><i class="fas fa-tags"></i>
+                Categories</a></li>
+            <li><a href="/admin/logout"><i class="fas fa-sign-out-alt"></i>
+                Logout</a></li>
           </ul>
         </div>
         <div class="settings">
@@ -77,32 +81,36 @@
       </div>
     </div>
   </header>
-
   <!-- Main Container -->
   <div class="main-container">
     <!-- Sidebar -->
     <aside class="sidebar">
       <ul class="sidebar-list">
-        <li class="sidebar-item"><a href="/admin" class="active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
-        </li>
-        <li class="sidebar-item"><a href="/admin/orders"><i class="fas fa-shopping-bag"></i> View Orders</a></li>
-        <li class="sidebar-item"><a href="/admin/manage_users"><i class="fas fa-users"></i> Manage Users</a></li>
-        <li class="sidebar-item"><a href="/admin/categories"><i class="fas fa-tags"></i> Categories</a></li>
-        <li class="sidebar-item"><a href="/admin/product"><i class="fas fa-brands fa-product-hunt"></i> Products</a>
-        </li>
-        <li class="sidebar-item"><a href="/admin/add_product"><i class="fas fa-plus-circle"></i> Add Product</a></li>
-        <li class="sidebar-item"><a href="/admin/brands"><i class="fas fa-copyright"></i> Manage Brands</a></li>
-        <li class="sidebar-item"><a href="/admin/chat"><i class="fas fa-comments"></i> Chat <span
-              class="unread-count">0</span></a></li>
-        <li class="sidebar-item"><a href="/admin/logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+        <li class="sidebar-item"><a href="/admin" class="active"><i class="fas fa-tachometer-alt"></i>
+            Dashboard</a></li>
+        <li class="sidebar-item"><a href="/admin/orders"><i class="fas fa-shopping-bag"></i>
+            View Orders</a></li>
+        <li class="sidebar-item"><a href="/admin/manage_users"><i class="fas fa-users"></i>
+            Manage Users</a></li>
+        <li class="sidebar-item"><a href="/admin/categories"><i class="fas fa-tags"></i>
+            Categories</a></li>
+        <li class="sidebar-item"><a href="/admin/product"><i class="fas fa-brands fa-product-hunt"></i>
+            Products</a></li>
+        <li class="sidebar-item"><a href="/admin/add_product"><i class="fas fa-plus-circle"></i>
+            Add Product</a></li>
+        <li class="sidebar-item"><a href="/admin/brands"><i class="fas fa-copyright"></i>
+            Manage Brands</a></li>
+        <li class="sidebar-item"><a href="/admin/chat"><i class="fas fa-comments"></i>
+            Chat
+            <span class="unread-count">0</span></a></li>
+        <li class="sidebar-item"><a href="/admin/logout"><i class="fas fa-sign-out-alt"></i>
+            Logout</a></li>
       </ul>
     </aside>
-
     <!-- Main Content -->
     <main class="admin-main">
       <div class="admin-content">
         <h1>Admin Dashboard</h1>
-
         <!-- Overview -->
         <section class="overview">
           <h2>Overview</h2>
@@ -111,47 +119,58 @@
               <i class="fas fa-shopping-bag"></i>
               <h3>Total Orders</h3>
               <p data-metric="total-orders">0</p>
-              <div class="growth">0% <i class="fas fa-arrow-up"></i></div>
+              <div class="growth">0%
+                <i class="fas fa-arrow-up"></i>
+              </div>
               <canvas class="metric-chart" data-metric="total-orders-chart"></canvas>
             </div>
             <div class="dashboard-card">
               <i class="fas fa-box"></i>
               <h3>Total Products</h3>
               <p data-metric="total-products">0</p>
-              <div class="growth">0% <i class="fas fa-arrow-up"></i></div>
+              <div class="growth">0%
+                <i class="fas fa-arrow-up"></i>
+              </div>
               <canvas class="metric-chart" data-metric="total-products-chart"></canvas>
             </div>
             <div class="dashboard-card">
               <i class="fas fa-users"></i>
               <h3>Total Users</h3>
               <p data-metric="total-users">0</p>
-              <div class="growth">0% <i class="fas fa-arrow-up"></i></div>
+              <div class="growth">0%
+                <i class="fas fa-arrow-up"></i>
+              </div>
               <canvas class="metric-chart" data-metric="total-users-chart"></canvas>
             </div>
             <div class="dashboard-card">
               <i class="fas fa-tags"></i>
               <h3>Total Categories</h3>
               <p data-metric="total-categories">0</p>
-              <div class="growth">0% <i class="fas fa-arrow-up"></i></div>
+              <div class="growth">0%
+                <i class="fas fa-arrow-up"></i>
+              </div>
               <canvas class="metric-chart" data-metric="total-categories-chart"></canvas>
             </div>
             <div class="dashboard-card">
               <i class="fas fa-dollar-sign"></i>
               <h3>Revenue</h3>
               <p data-metric="revenue">$0</p>
-              <div class="growth">0% <i class="fas fa-arrow-up"></i></div>
+              <div class="growth">0%
+                <i class="fas fa-arrow-up"></i>
+              </div>
               <canvas class="metric-chart" data-metric="revenue-chart"></canvas>
             </div>
             <div class="dashboard-card">
               <i class="fas fa-clock"></i>
               <h3>Pending Orders</h3>
               <p data-metric="pending-orders">0</p>
-              <div class="growth">0% <i class="fas fa-arrow-up"></i></div>
+              <div class="growth">0%
+                <i class="fas fa-arrow-up"></i>
+              </div>
               <canvas class="metric-chart" data-metric="pending-orders-chart"></canvas>
             </div>
           </div>
         </section>
-
         <!-- Overview Charts -->
         <section class="overview-charts">
           <h2>Orders Per Day</h2>
@@ -159,7 +178,6 @@
             <canvas id="ordersChart"></canvas>
           </div>
         </section>
-
         <!-- Recent Orders -->
         <section class="recent-orders">
           <h2>Recent Orders</h2>
@@ -241,7 +259,6 @@
             </table>
           </div>
         </section>
-
         <!-- Quick Actions -->
         <section class="quick-actions">
           <h2>Quick Actions</h2>
@@ -254,7 +271,6 @@
       </div>
     </main>
   </div>
-
   <!-- Settings Modal -->
   <div class="modal" id="settings-modal">
     <div class="modal-content">
@@ -282,7 +298,6 @@
       </div>
     </div>
   </div>
-
   <!-- Notifications Modal -->
   <div class="modal" id="notifications-modal">
     <div class="modal-content">
@@ -296,7 +311,6 @@
       </div>
     </div>
   </div>
-
   <!-- Footer -->
   <footer class="site-footer">
     <div class="footer-container">
@@ -304,9 +318,12 @@
         <h3 class="footer-logo">SWISS<span class="highlight">Tools</span></h3>
         <p>Your trusted partner in engineering & construction tools.</p>
         <div class="footer-contact">
-          <p><i class="fas fa-map-marker-alt"></i> 5 Cherubim Road, Mile 3 Market, Port Harcourt.</p>
-          <p><i class="fas fa-phone-alt"></i> +234 913 232 8654</p>
-          <p><i class="fas fa-envelope"></i> support@swisstools.store</p>
+          <p><i class="fas fa-map-marker-alt"></i>
+            5 Cherubim Road, Mile 3 Market, Port Harcourt.</p>
+          <p><i class="fas fa-phone-alt"></i>
+            +234 913 232 8654</p>
+          <p><i class="fas fa-envelope"></i>
+            support@swisstools.store</p>
         </div>
       </div>
       <div class="footer-column">
@@ -343,14 +360,16 @@
       </div>
     </div>
     <div class="footer-bottom">
-      <p>© <span class="year"></span> SWISSTools. All rights reserved.</p>
+      <p>©
+        <span class="year"></span>
+        SWISSTools. All rights reserved.
+      </p>
     </div>
     <button type="button" class="scroll-top-btn">
       <i class="fas fa-arrow-up"></i>
     </button>
   </footer>
-
-  <script src="assets/js/admin_dashboard.js"></script>
+  <script type="module" src="assets/js/admin_dashboard.js"></script>
 </body>
 
 </html>
