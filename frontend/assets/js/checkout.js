@@ -311,7 +311,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         description: `Payment for ${cart.length} items`,
         logo: "assets/images/swisstools_logo.png",
       },
-      callback: async function(response) {
+      callback: async function (response) {
         if (response.status === "successful") {
           await completeOrder(txRef, response.transaction_id);
         } else {
@@ -320,7 +320,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           placeOrderBtn.disabled = false;
         }
       },
-      onclose: function() {
+      onclose: function () {
         document.body.removeChild(loader);
         placeOrderBtn.disabled = false;
       }
