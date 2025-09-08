@@ -53,6 +53,7 @@ socketIO(server, sessionMiddleware);
 app.use("/admin", adminRoutes);
 app.use("/", rootRoutes);
 app.use("/api", require("./routes/api/routes"))
+app.use("/api/verify_payment", require("./routes/api/verify_payment"));
 
 app.all("/{*splat}", (req, res) => {
   if (req.accepts("html")) {
