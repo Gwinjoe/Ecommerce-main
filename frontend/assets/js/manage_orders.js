@@ -1,195 +1,41 @@
+// manage_orders.js
 import { gsap } from "gsap";
+import showStatusModal from "./modal.js";
+import { loadingIndicator } from "./loader.js";
 
 // Log script loading for debugging
-console.log("orders.js loaded");
+console.log("manage_orders.js loaded");
 
 // Google Analytics event tracking function
 function trackEvent(eventName, eventParams = {}) {
   if (typeof gtag === 'function') {
     gtag('event', eventName, eventParams);
   } else {
-    console.warn("Google Analytics not loaded, event not tracked:", eventName, eventParams);
+    // no-op in dev
+    // console.warn("Google Analytics not loaded:", eventName, eventParams);
   }
 }
 
-// Mock order data storage (in production, move to shared module or backend)
-const mockOrders = [
-  {
-    id: "ORD001",
-    customer: "John Doe",
-    date: "2025-07-01",
-    amount: 149.99,
-    status: "pending",
-    customerDetails: {
-      email: "john.doe@example.com",
-      phone: "+1-555-0101",
-      address: "123 Maple St, Springfield, IL 62701"
-    },
-    items: [
-      { product: "Laptop Pro", quantity: 1, price: 1299.99, total: 1299.99 },
-      { product: "Wireless Mouse", quantity: 2, price: 29.99, total: 59.98 }
-    ]
-  },
-  {
-    id: "ORD002",
-    customer: "Jane Smith",
-    date: "2025-06-30",
-    amount: 89.50,
-    status: "shipped",
-    customerDetails: {
-      email: "jane.smith@example.com",
-      phone: "+1-555-0102",
-      address: "456 Oak Ave, Chicago, IL 60601"
-    },
-    items: [
-      { product: "Cordless Drill", quantity: 1, price: 89.50, total: 89.50 }
-    ]
-  },
-  {
-    id: "ORD003",
-    customer: "Alice Johnson",
-    date: "2025-06-29",
-    amount: 299.99,
-    status: "delivered",
-    customerDetails: {
-      email: "alice.johnson@example.com",
-      phone: "+1-555-0103",
-      address: "789 Pine Rd, Evanston, IL 60201"
-    },
-    items: [
-      { product: "Coffee Table", quantity: 1, price: 199.99, total: 199.99 },
-      { product: "Desk Lamp", quantity: 1, price: 39.99, total: 39.99 }
-    ]
-  },
-  {
-    id: "ORD004",
-    customer: "Bob Brown",
-    date: "2025-06-28",
-    amount: 45.75,
-    status: "cancelled",
-    customerDetails: {
-      email: "bob.brown@example.com",
-      phone: "+1-555-0104",
-      address: "101 Elm St, Naperville, IL 60540"
-    },
-    items: [
-      { product: "Steel Rod", quantity: 1, price: 45.75, total: 45.75 }
-    ]
-  },
-  {
-    id: "ORD005",
-    customer: "Emma Davis",
-    date: "2025-06-27",
-    amount: 199.99,
-    status: "pending",
-    customerDetails: {
-      email: "emma.davis@example.com",
-      phone: "+1-555-0105",
-      address: "202 Birch Ln, Aurora, IL 60504"
-    },
-    items: [
-      { product: "Bookshelf", quantity: 1, price: 149.99, total: 149.99 },
-      { product: "Desk Lamp", quantity: 1, price: 39.99, total: 39.99 }
-    ]
-  },
-  {
-    id: "ORD006",
-    customer: "Liam Wilson",
-    date: "2025-06-26",
-    amount: 1299.99,
-    status: "shipped",
-    customerDetails: {
-      email: "liam.wilson@example.com",
-      phone: "+1-555-0106",
-      address: "303 Cedar Dr, Joliet, IL 60435"
-    },
-    items: [
-      { product: "Smartphone X", quantity: 1, price: 799.99, total: 799.99 },
-      { product: "Laptop Pro", quantity: 1, price: 1299.99, total: 1299.99 }
-    ]
-  },
-  {
-    id: "ORD007",
-    customer: "Olivia Taylor",
-    date: "2025-06-25",
-    amount: 29.99,
-    status: "delivered",
-    customerDetails: {
-      email: "olivia.taylor@example.com",
-      phone: "+1-555-0107",
-      address: "404 Walnut St, Peoria, IL 61604"
-    },
-    items: [
-      { product: "Wireless Mouse", quantity: 1, price: 29.99, total: 29.99 }
-    ]
-  },
-  {
-    id: "ORD008",
-    customer: "Noah Martinez",
-    date: "2025-06-24",
-    amount: 79.99,
-    status: "pending",
-    customerDetails: {
-      email: "noah.martinez@example.com",
-      phone: "+1-555-0108",
-      address: "505 Spruce Ct, Rockford, IL 61101"
-    },
-    items: [
-      { product: "Hammer", quantity: 1, price: 19.99, total: 19.99 },
-      { product: "Wood Plank", quantity: 4, price: 15.75, total: 63.00 }
-    ]
-  },
-  {
-    id: "ORD009",
-    customer: "Sophia Anderson",
-    date: "2025-06-23",
-    amount: 249.99,
-    status: "shipped",
-    customerDetails: {
-      email: "sophia.anderson@example.com",
-      phone: "+1-555-0109",
-      address: "606 Chestnut Ave, Champaign, IL 61820"
-    },
-    items: [
-      { product: "Coffee Table", quantity: 1, price: 199.99, total: 199.99 },
-      { product: "Desk Lamp", quantity: 1, price: 39.99, total: 39.99 }
-    ]
-  },
-  {
-    id: "ORD010",
-    customer: "James Thomas",
-    date: "2025-06-22",
-    amount: 399.99,
-    status: "delivered",
-    customerDetails: {
-      email: "james.thomas@example.com",
-      phone: "+1-555-0110",
-      address: "707 Willow Rd, Bloomington, IL 61701"
-    },
-    items: [
-      { product: "Bookshelf", quantity: 1, price: 149.99, total: 149.99 },
-      { product: "Coffee Table", quantity: 1, price: 199.99, total: 199.99 }
-    ]
-  }
-];
-
-// Mock API for fetching orders
+// Helper: fetch orders from server
 async function fetchOrders() {
-
-  const response = await fetch("/api/orders")
-  const { success, data } = await response.json();
-  if (success) {
-    return data
+  try {
+    const response = await fetch("/api/orders");
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload = await response.json();
+    return payload.success ? payload.data : [];
+  } catch (err) {
+    console.error("fetchOrders error", err);
+    return [];
   }
 }
 
-// Download orders as CSV
+// CSV download helper (unchanged)
 function downloadCSV(orders) {
   const headers = ["Order ID", "Customer", "Date", "Amount", "Status"];
   const csvRows = [
     headers.join(","),
     ...orders.map(order =>
-      `"${order.payment.reference}","${order.customer.name}","${order.createdAt}","${order.amount.toFixed(2)}","${order.status}"`
+      `"${order.payment?.reference || ''}","${order.customer?.name || ''}","${order.createdAt || ''}","${(order.totalPrice && order.totalPrice.$numberDecimal) ? parseFloat(order.totalPrice.$numberDecimal).toFixed(2) : (order.amount || 0).toFixed(2)}","${order.status || ''}"`
     )
   ];
   const csvContent = csvRows.join("\n");
@@ -204,7 +50,7 @@ function downloadCSV(orders) {
   URL.revokeObjectURL(url);
 }
 
-// Debounce function for search input
+// Debounce utility
 function debounce(func, wait) {
   let timeout;
   return function executedFunction(...args) {
@@ -217,7 +63,8 @@ function debounce(func, wait) {
   };
 }
 
-// Render orders with pagination, sort, filter, and search
+/* ------------------- renderOrders & helpers ------------------- */
+
 async function renderOrders(page = 1, sort = "date-desc", filter = "", search = "", startDate = "", endDate = "") {
   const orderList = document.querySelector("#order-list");
   const noOrders = document.querySelector(".no-orders");
@@ -225,6 +72,7 @@ async function renderOrders(page = 1, sort = "date-desc", filter = "", search = 
   const bulkActions = document.querySelector(".bulk-actions");
   const updateStatusBtn = document.querySelector(".update-status-btn");
   const selectAllCheckbox = document.querySelector("#select-all");
+
   if (!orderList || !noOrders || !pageInfo || !bulkActions || !updateStatusBtn || !selectAllCheckbox) {
     console.error("Error: Required elements not found", {
       orderList: !!orderList,
@@ -238,24 +86,22 @@ async function renderOrders(page = 1, sort = "date-desc", filter = "", search = 
   }
 
   try {
-    let orders = await fetchOrders();
-    console.log("Fetched orders:", orders.length);
+    // Fetch orders from server (no loader here - you can add if you prefer)
     const itemsPerPage = 5;
+    let orders = await fetchOrders();
 
-    // Apply search
+    // Filtering/searching/sorting (client side based on returned list)
     if (search) {
       orders = orders.filter(order =>
-        order.payment.reference.toLowerCase().includes(search.toLowerCase()) ||
-        order.customer.name.toLowerCase().includes(search.toLowerCase())
+        (order.payment?.reference || '').toLowerCase().includes(search.toLowerCase()) ||
+        (order.customer?.name || '').toLowerCase().includes(search.toLowerCase())
       );
     }
 
-    // Apply status filter
     if (filter) {
       orders = orders.filter(order => order.status === filter);
     }
 
-    // Apply date range filter
     if (startDate && endDate) {
       const start = new Date(startDate);
       const end = new Date(endDate);
@@ -267,26 +113,33 @@ async function renderOrders(page = 1, sort = "date-desc", filter = "", search = 
       }
     }
 
-    // Apply sort
+    // sort
     orders.sort((a, b) => {
-      if (sort === "date-desc") return new Date(b.date) - new Date(a.date);
-      if (sort === "date-asc") return new Date(a.date) - new Date(b.date);
-      if (sort === "amount-asc") return a.amount - b.amount;
-      if (sort === "amount-desc") return b.amount - a.amount;
+      if (sort === "date-desc") return new Date(b.createdAt) - new Date(a.createdAt);
+      if (sort === "date-asc") return new Date(a.createdAt) - new Date(b.createdAt);
+      if (sort === "amount-asc") {
+        const aAmt = a.totalPrice?.$numberDecimal ? parseFloat(a.totalPrice.$numberDecimal) : (a.amount || 0);
+        const bAmt = b.totalPrice?.$numberDecimal ? parseFloat(b.totalPrice.$numberDecimal) : (b.amount || 0);
+        return aAmt - bAmt;
+      }
+      if (sort === "amount-desc") {
+        const aAmt = a.totalPrice?.$numberDecimal ? parseFloat(a.totalPrice.$numberDecimal) : (a.amount || 0);
+        const bAmt = b.totalPrice?.$numberDecimal ? parseFloat(b.totalPrice.$numberDecimal) : (b.amount || 0);
+        return bAmt - aAmt;
+      }
       return 0;
     });
 
-    // Pagination
+    // pagination
     const totalPages = Math.ceil(orders.length / itemsPerPage) || 1;
     page = Math.min(page, totalPages);
     const start = (page - 1) * itemsPerPage;
     const end = start + itemsPerPage;
     const paginatedOrders = orders.slice(start, end);
 
-    // Update page info
     pageInfo.textContent = `Page ${page} of ${totalPages}`;
 
-    // Enable/disable pagination buttons
+    // pagination button enable/disable
     const firstBtn = document.querySelector("#first-page");
     const prevBtn = document.querySelector("#prev-page");
     const nextBtn = document.querySelector("#next-page");
@@ -296,16 +149,14 @@ async function renderOrders(page = 1, sort = "date-desc", filter = "", search = 
       prevBtn.disabled = page === 1;
       nextBtn.disabled = page === totalPages;
       lastBtn.disabled = page === totalPages;
-    } else {
-      console.error("Error: Pagination buttons not found");
     }
 
-    // Reset select all checkbox
+    // reset select all
     selectAllCheckbox.checked = false;
 
-    // Render orders
+    // render table rows
     orderList.innerHTML = "";
-    if (paginatedOrders.length === 0) {
+    if (!paginatedOrders || paginatedOrders.length === 0) {
       noOrders.classList.add("active");
       bulkActions.style.display = "none";
       gsap.from(noOrders, { opacity: 0, duration: 0.5, ease: "power3.out" });
@@ -315,12 +166,13 @@ async function renderOrders(page = 1, sort = "date-desc", filter = "", search = 
     noOrders.classList.remove("active");
     paginatedOrders.forEach((order, index) => {
       const row = document.createElement("tr");
+      const amount = order.totalPrice?.$numberDecimal ? parseFloat(order.totalPrice.$numberDecimal).toFixed(2) : ((order.amount || 0).toFixed(2));
       row.innerHTML = `
                 <td><input type="checkbox" class="select-order" data-id="${order._id}" data-ga-event="select_order"></td>
-                <td>${order.payment.reference}</td>
-                <td>${order.customer.name}</td>
+                <td>${order.payment?.reference || ''}</td>
+                <td>${order.customer?.name || ''}</td>
                 <td>${new Date(order.createdAt).toLocaleDateString()}</td>
-                <td>₦${parseFloat(order.totalPrice.$numberDecimal).toFixed(2)}</td>
+                <td>₦${amount}</td>
                 <td><span class="status-badge status-${order.status}">${order.status}</span></td>
                 <td>
                     <button class="action-btn view-btn" data-id="${order._id}" data-ga-event="view_order"><i class="fas fa-eye"></i></button>
@@ -333,22 +185,23 @@ async function renderOrders(page = 1, sort = "date-desc", filter = "", search = 
                 </td>
             `;
       orderList.appendChild(row);
-      gsap.from(row, { opacity: 0, y: 20, duration: 0.5, ease: "power3.out", delay: index * 0.1 });
+      gsap.from(row, { opacity: 0, y: 20, duration: 0.5, ease: "power3.out", delay: index * 0.06 });
     });
 
-    // Render mobile cards
+    // render mobile cards (if small)
     const mobileContainer = document.querySelector(".orders-table");
-    if (window.innerWidth <= 768) {
+    if (window.innerWidth <= 768 && mobileContainer) {
       mobileContainer.innerHTML = "";
       paginatedOrders.forEach((order, index) => {
         const card = document.createElement("div");
         card.classList.add("order-card");
+        const amount = order.totalPrice?.$numberDecimal ? parseFloat(order.totalPrice.$numberDecimal).toFixed(2) : ((order.amount || 0).toFixed(2));
         card.innerHTML = `
                     <div><input type="checkbox" class="select-order" data-id="${order._id}" data-ga-event="select_order"></div>
-                    <div><strong>Order ID:</strong> ${order.payment.reference}</div>
-                    <div><strong>Customer:</strong> ${order.customer.name}</div>
+                    <div><strong>Order ID:</strong> ${order.payment?.reference || ''}</div>
+                    <div><strong>Customer:</strong> ${order.customer?.name || ''}</div>
                     <div><strong>Date:</strong> ${new Date(order.createdAt).toLocaleDateString()}</div>
-                    <div><strong>Amount:</strong> ₦${parseFloat(order.totalPrice.$numberDecimal).toFixed(2)}</div>
+                    <div><strong>Amount:</strong> ₦${amount}</div>
                     <div><strong>Status:</strong> <span class="status-badge status-${order.status}">${order.status}</span></div>
                     <div class="actions">
                         <button class="action-btn view-btn" data-id="${order._id}" data-ga-event="view_order"><i class="fas fa-eye"></i></button>
@@ -361,13 +214,11 @@ async function renderOrders(page = 1, sort = "date-desc", filter = "", search = 
                     </div>
                 `;
         mobileContainer.appendChild(card);
-        gsap.from(card, { opacity: 0, y: 20, duration: 0.5, ease: "power3.out", delay: index * 0.1 });
+        gsap.from(card, { opacity: 0, y: 20, duration: 0.5, ease: "power3.out", delay: index * 0.06 });
       });
     }
 
-    // Update bulk actions visibility
-    updateBulkActions();
-
+    updateBulkActions(); // update actions visibility
     return { orders, totalPages };
   } catch (error) {
     console.error("Error rendering orders:", error);
@@ -380,13 +231,12 @@ async function renderOrders(page = 1, sort = "date-desc", filter = "", search = 
   }
 }
 
-// Update bulk actions visibility and state
 function updateBulkActions() {
   const bulkActions = document.querySelector(".bulk-actions");
   const updateStatusBtn = document.querySelector(".update-status-btn");
   const selectAllCheckbox = document.querySelector("#select-all");
   if (!bulkActions || !updateStatusBtn || !selectAllCheckbox) {
-    console.error("Error: Bulk action elements not found");
+    // console.error("Error: Bulk action elements not found");
     return;
   }
 
@@ -403,8 +253,10 @@ function updateBulkActions() {
   }
 }
 
+/* ------------------- DOM Ready & Events ------------------- */
+
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("DOMContentLoaded fired for orders.js");
+  console.log("DOMContentLoaded fired for manage_orders.js");
 
   let currentPage = 1;
   let currentSort = "date-desc";
@@ -414,58 +266,48 @@ document.addEventListener("DOMContentLoaded", () => {
   let currentEndDate = "";
   let currentOrders = [];
 
-  // Load initial orders
-  renderOrders(currentPage, currentSort, currentFilter, currentSearch, currentStartDate, currentEndDate).then(({ orders }) => {
-    currentOrders = orders;
-  });
+  // initial load
+  renderOrders(currentPage, currentSort, currentFilter, currentSearch, currentStartDate, currentEndDate)
+    .then(({ orders }) => { currentOrders = orders; });
 
-  // Search handler with debounce
+  // search with debounce
   const searchInput = document.querySelector("#search");
   if (searchInput) {
     const debouncedSearch = debounce(() => {
       currentSearch = searchInput.value.trim();
       currentPage = 1;
-      renderOrders(currentPage, currentSort, currentFilter, currentSearch, currentStartDate, currentEndDate).then(({ orders }) => {
-        currentOrders = orders;
-      });
+      renderOrders(currentPage, currentSort, currentFilter, currentSearch, currentStartDate, currentEndDate)
+        .then(({ orders }) => { currentOrders = orders; });
       trackEvent("search_orders", { query: currentSearch });
     }, 300);
     searchInput.addEventListener("input", debouncedSearch);
-  } else {
-    console.error("Error: #search not found");
   }
 
-  // Sort handler
+  // sort handler
   const sortSelect = document.querySelector("#sort");
   if (sortSelect) {
     sortSelect.addEventListener("change", () => {
       currentSort = sortSelect.value;
       currentPage = 1;
-      renderOrders(currentPage, currentSort, currentFilter, currentSearch, currentStartDate, currentEndDate).then(({ orders }) => {
-        currentOrders = orders;
-      });
+      renderOrders(currentPage, currentSort, currentFilter, currentSearch, currentStartDate, currentEndDate)
+        .then(({ orders }) => { currentOrders = orders; });
       trackEvent("sort_orders", { sort: currentSort });
     });
-  } else {
-    console.error("Error: #sort not found");
   }
 
-  // Filter handler
+  // filter handler
   const filterSelect = document.querySelector("#filter");
   if (filterSelect) {
     filterSelect.addEventListener("change", () => {
       currentFilter = filterSelect.value;
       currentPage = 1;
-      renderOrders(currentPage, currentSort, currentFilter, currentSearch, currentStartDate, currentEndDate).then(({ orders }) => {
-        currentOrders = orders;
-      });
+      renderOrders(currentPage, currentSort, currentFilter, currentSearch, currentStartDate, currentEndDate)
+        .then(({ orders }) => { currentOrders = orders; });
       trackEvent("filter_orders", { filter: currentFilter });
     });
-  } else {
-    console.error("Error: #filter not found");
   }
 
-  // Date range handler
+  // date range
   const startDateInput = document.querySelector("#start-date");
   const endDateInput = document.querySelector("#end-date");
   if (startDateInput && endDateInput) {
@@ -480,58 +322,53 @@ document.addEventListener("DOMContentLoaded", () => {
         currentEndDate = "";
       }
       currentPage = 1;
-      renderOrders(currentPage, currentSort, currentFilter, currentSearch, currentStartDate, currentEndDate).then(({ orders }) => {
-        currentOrders = orders;
-      });
+      renderOrders(currentPage, currentSort, currentFilter, currentSearch, currentStartDate, currentEndDate)
+        .then(({ orders }) => { currentOrders = orders; });
       trackEvent("filter_date_range", { start_date: currentStartDate, end_date: currentEndDate });
     }, 300);
     startDateInput.addEventListener("change", debouncedDateRange);
     endDateInput.addEventListener("change", debouncedDateRange);
-  } else {
-    console.error("Error: #start-date or #end-date not found");
   }
 
-  // Export CSV handler
+  // export CSV
   const exportBtn = document.querySelector(".export-btn");
   if (exportBtn) {
     exportBtn.addEventListener("click", async () => {
-      if (confirm("Export current orders to CSV?")) {
+      if (!confirm("Export current orders to CSV?")) return;
+      try {
+        loadingIndicator.show("Preparing CSV...", { dismissible: false });
         let orders = await fetchOrders();
-        if (currentSearch) {
-          orders = orders.filter(order =>
-            order.payment.reference.toLowerCase().includes(currentSearch.toLowerCase()) ||
-            order.customer.name.toLowerCase().includes(currentSearch.toLowerCase())
-          );
-        }
-        if (currentFilter) {
-          orders = orders.filter(order => order.status === currentFilter);
-        }
+        // apply same client filters
+        if (currentSearch) orders = orders.filter(o => (o.payment?.reference || '').toLowerCase().includes(currentSearch.toLowerCase()) || (o.customer?.name || '').toLowerCase().includes(currentSearch.toLowerCase()));
+        if (currentFilter) orders = orders.filter(o => o.status === currentFilter);
         if (currentStartDate && currentEndDate) {
-          const start = new Date(currentStartDate);
-          const end = new Date(currentEndDate);
-          if (start <= end) {
-            orders = orders.filter(order => {
-              const orderDate = new Date(order.date);
-              return orderDate >= start && orderDate <= end;
+          const s = new Date(currentStartDate), e = new Date(currentEndDate);
+          if (s <= e) {
+            orders = orders.filter(o => {
+              const d = new Date(o.createdAt);
+              return d >= s && d <= e;
             });
           }
         }
+        // sort
         orders.sort((a, b) => {
-          if (currentSort === "date-desc") return new Date(b.date) - new Date(a.date);
-          if (currentSort === "date-asc") return new Date(a.date) - new Date(b.date);
-          if (currentSort === "amount-asc") return a.amount - b.amount;
-          if (currentSort === "amount-desc") return b.amount - a.amount;
+          if (currentSort === "date-desc") return new Date(b.createdAt) - new Date(a.createdAt);
+          if (currentSort === "date-asc") return new Date(a.createdAt) - new Date(b.createdAt);
           return 0;
         });
         downloadCSV(orders);
+        loadingIndicator.hide();
+        showStatusModal("success", `Exported ${orders.length} orders`);
         trackEvent("export_csv", { order_count: orders.length });
+      } catch (err) {
+        console.error("Export error", err);
+        loadingIndicator.hide();
+        showStatusModal("error", "Failed to export CSV");
       }
     });
-  } else {
-    console.error("Error: .export-btn not found");
   }
 
-  // Pagination handlers
+  // pagination controls
   const firstBtn = document.querySelector("#first-page");
   const prevBtn = document.querySelector("#prev-page");
   const nextBtn = document.querySelector("#next-page");
@@ -540,18 +377,16 @@ document.addEventListener("DOMContentLoaded", () => {
     firstBtn.addEventListener("click", () => {
       if (currentPage !== 1) {
         currentPage = 1;
-        renderOrders(currentPage, currentSort, currentFilter, currentSearch, currentStartDate, currentEndDate).then(({ orders }) => {
-          currentOrders = orders;
-        });
+        renderOrders(currentPage, currentSort, currentFilter, currentSearch, currentStartDate, currentEndDate)
+          .then(({ orders }) => { currentOrders = orders; });
         trackEvent("pagination_first");
       }
     });
     prevBtn.addEventListener("click", () => {
       if (currentPage > 1) {
         currentPage--;
-        renderOrders(currentPage, currentSort, currentFilter, currentSearch, currentStartDate, currentEndDate).then(({ orders }) => {
-          currentOrders = orders;
-        });
+        renderOrders(currentPage, currentSort, currentFilter, currentSearch, currentStartDate, currentEndDate)
+          .then(({ orders }) => { currentOrders = orders; });
         trackEvent("pagination_prev");
       }
     });
@@ -559,9 +394,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const totalPages = Math.ceil(currentOrders.length / 5);
       if (currentPage < totalPages) {
         currentPage++;
-        renderOrders(currentPage, currentSort, currentFilter, currentSearch, currentStartDate, currentEndDate).then(({ orders }) => {
-          currentOrders = orders;
-        });
+        renderOrders(currentPage, currentSort, currentFilter, currentSearch, currentStartDate, currentEndDate)
+          .then(({ orders }) => { currentOrders = orders; });
         trackEvent("pagination_next");
       }
     });
@@ -569,17 +403,14 @@ document.addEventListener("DOMContentLoaded", () => {
       const totalPages = Math.ceil(currentOrders.length / 5);
       if (currentPage !== totalPages) {
         currentPage = totalPages;
-        renderOrders(currentPage, currentSort, currentFilter, currentSearch, currentStartDate, currentEndDate).then(({ orders }) => {
-          currentOrders = orders;
-        });
+        renderOrders(currentPage, currentSort, currentFilter, currentSearch, currentStartDate, currentEndDate)
+          .then(({ orders }) => { currentOrders = orders; });
         trackEvent("pagination_last");
       }
     });
-  } else {
-    console.error("Error: Pagination buttons not found");
   }
 
-  // Select all handler
+  // select all
   const selectAllCheckbox = document.querySelector("#select-all");
   if (selectAllCheckbox) {
     selectAllCheckbox.addEventListener("change", () => {
@@ -590,49 +421,79 @@ document.addEventListener("DOMContentLoaded", () => {
       updateBulkActions();
       trackEvent("select_all_orders", { checked: selectAllCheckbox.checked });
     });
-  } else {
-    console.error("Error: #select-all not found");
   }
 
-  // Event delegation for dynamic elements
-  document.querySelector(".orders-table").addEventListener("change", (e) => {
-    if (e.target.classList.contains("select-order")) {
-      updateBulkActions();
-      trackEvent("select_order", { order_id: e.target.dataset.id, checked: e.target.checked });
-    } else if (e.target.classList.contains("status-select")) {
-      const orderId = e.target.dataset.id;
-      const newStatus = e.target.value;
-      mockOrders.forEach(order => {
-        if (order._id === orderId) {
-          order.status = newStatus;
+  // Event delegation: status-select change and view button clicks
+  const ordersTableContainer = document.querySelector(".orders-table");
+  if (ordersTableContainer) {
+    ordersTableContainer.addEventListener("change", async (e) => {
+      const target = e.target;
+      if (target.classList.contains("select-order")) {
+        updateBulkActions();
+        trackEvent("select_order", { order_id: target.dataset.id, checked: target.checked });
+        return;
+      }
+
+      // STATUS SELECT - single order update
+      if (target.classList.contains("status-select")) {
+        const orderId = target.dataset.id;
+        const newStatus = target.value;
+        if (!orderId) return;
+
+        // Show loader and call server
+        try {
+          loadingIndicator.show("Updating order status...", { dismissible: false });
+          const res = await fetch("/api/edit_order", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: orderId, status: newStatus })
+          });
+          const payload = await res.json();
+          loadingIndicator.hide();
+
+          if (payload && payload.success) {
+            // Success - re-render and show modal
+            await renderOrders(currentPage, currentSort, currentFilter, currentSearch, currentStartDate, currentEndDate)
+              .then(({ orders }) => { currentOrders = orders; });
+            showStatusModal("success", payload.message || "Order updated");
+          } else {
+            // Failure
+            showStatusModal("error", (payload && payload.message) ? payload.message : "Failed to update order");
+            // revert the select visually by re-rendering (to server state)
+            await renderOrders(currentPage, currentSort, currentFilter, currentSearch, currentStartDate, currentEndDate)
+              .then(({ orders }) => { currentOrders = orders; });
+          }
+        } catch (err) {
+          console.error("update status error", err);
+          loadingIndicator.hide();
+          showStatusModal("error", "Network error while updating order");
+          await renderOrders(currentPage, currentSort, currentFilter, currentSearch, currentStartDate, currentEndDate)
+            .then(({ orders }) => { currentOrders = orders; });
         }
-      });
-      renderOrders(currentPage, currentSort, currentFilter, currentSearch, currentStartDate, currentEndDate).then(({ orders }) => {
-        currentOrders = orders;
-      });
-      trackEvent("update_status", { order_id: orderId, status: newStatus });
-    }
-  });
-
-  document.querySelector(".orders-table").addEventListener("click", (e) => {
-    const target = e.target.closest(".action-btn.view-btn");
-    if (!target) return;
-
-    const id = target.dataset.id;
-    console.log(`Navigating to order details for ID: ${id}`);
-    gsap.to(target, {
-      scale: 0.95,
-      duration: 0.1,
-      ease: "power2.in",
-      onComplete: () => {
-        gsap.to(target, { scale: 1, duration: 0.1 });
-        trackEvent("view_order", { order_id: id });
-        window.location.href = `/admin/order_details?id=${id}`;
       }
     });
-  });
 
-  // Bulk status update handler
+    // click handler for view button
+    ordersTableContainer.addEventListener("click", (e) => {
+      const target = e.target.closest(".action-btn.view-btn");
+      if (!target) return;
+      const id = target.dataset.id;
+      gsap.to(target, {
+        scale: 0.95,
+        duration: 0.1,
+        ease: "power2.in",
+        onComplete: () => {
+          gsap.to(target, { scale: 1, duration: 0.1 });
+          trackEvent("view_order", { order_id: id });
+          window.location.href = `/admin/order_details?id=${id}`;
+        }
+      });
+    });
+  } else {
+    console.error("Error: .orders-table container not found");
+  }
+
+  // Bulk status update
   const updateStatusBtn = document.querySelector(".update-status-btn");
   const bulkStatusSelect = document.querySelector("#bulk-status");
   if (updateStatusBtn && bulkStatusSelect) {
@@ -640,28 +501,47 @@ document.addEventListener("DOMContentLoaded", () => {
       updateBulkActions();
       trackEvent("bulk_status_select", { status: bulkStatusSelect.value });
     });
+
     updateStatusBtn.addEventListener("click", async () => {
       const selectedCheckboxes = document.querySelectorAll(".select-order:checked");
       if (selectedCheckboxes.length === 0 || !bulkStatusSelect.value) return;
-      if (confirm(`Update status of ${selectedCheckboxes.length} order(s) to ${bulkStatusSelect.value}?`)) {
-        const selectedIds = Array.from(selectedCheckboxes).map(cb => cb.dataset.id);
-        mockOrders.forEach(order => {
-          if (selectedIds.includes(order.id)) {
-            order.status = bulkStatusSelect.value;
-          }
+      if (!confirm(`Update status of ${selectedCheckboxes.length} order(s) to ${bulkStatusSelect.value}?`)) return;
+
+      const selectedIds = Array.from(selectedCheckboxes).map(cb => cb.dataset.id).filter(Boolean);
+      if (selectedIds.length === 0) return;
+
+      try {
+        loadingIndicator.show("Updating selected orders...", { dismissible: false });
+        const res = await fetch("/api/edit_multiple", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ selectedIds, status: bulkStatusSelect.value })
         });
-        const { orders } = await renderOrders(currentPage, currentSort, currentFilter, currentSearch, currentStartDate, currentEndDate);
-        currentOrders = orders;
-        trackEvent("bulk_update_status", { status: bulkStatusSelect.value, order_ids: selectedIds });
-        bulkStatusSelect.value = "";
-        updateBulkActions();
+        const payload = await res.json();
+        loadingIndicator.hide();
+
+        if (payload && payload.success) {
+          // success -> refresh and notify
+          await renderOrders(currentPage, currentSort, currentFilter, currentSearch, currentStartDate, currentEndDate)
+            .then(({ orders }) => { currentOrders = orders; });
+          showStatusModal("success", payload.message || "Selected orders updated");
+          trackEvent("bulk_update_status", { status: bulkStatusSelect.value, order_ids: selectedIds });
+          bulkStatusSelect.value = "";
+          updateBulkActions();
+        } else {
+          showStatusModal("error", (payload && payload.message) ? payload.message : "Failed to update selected orders");
+        }
+      } catch (err) {
+        console.error("bulk update error", err);
+        loadingIndicator.hide();
+        showStatusModal("error", "Network error while updating selected orders");
       }
     });
   } else {
     console.error("Error: .update-status-btn or #bulk-status not found");
   }
 
-  // Animate orders card
+  // animate cards & controls
   const ordersCard = document.querySelector(".orders-card");
   if (ordersCard) {
     gsap.from(ordersCard, {
@@ -670,11 +550,7 @@ document.addEventListener("DOMContentLoaded", () => {
       duration: 0.7,
       ease: "power3.out"
     });
-  } else {
-    console.error("Error: .orders-card not found");
   }
-
-  // Animate controls and table
   const controlsAndTable = document.querySelectorAll(".orders-controls, .orders-table, .pagination");
   if (controlsAndTable.length) {
     gsap.from(controlsAndTable, {
@@ -685,7 +561,6 @@ document.addEventListener("DOMContentLoaded", () => {
       ease: "power3.out",
       delay: 0.2
     });
-  } else {
-    console.error("Error: Orders controls or table not found");
   }
 });
+

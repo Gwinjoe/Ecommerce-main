@@ -193,7 +193,7 @@ exports.add_order = async (req, res) => {
 exports.edit_order = async (req, res) => {
   const { id, status } = req.body;
   try {
-    const existingOrder = await Orders.findById(id);
+    const existingOrder = await Orders.findById(id).populate({ path: "customer", select: "email name" }).populate({ path: "products.product", select: "name price" });
 
     if (!existingOrder) {
       return res.status(401).json({ success: false, message: "Cannot find Order" });
@@ -204,6 +204,25 @@ exports.edit_order = async (req, res) => {
     }
 
     const results = await existingOrder.save();
+    console.log(results)
+    let html = "";
+    results.products.forEach((item) => {
+      const h = `<li>${item.product.name} x${item.quantity}</li>`
+      html += h
+    })
+    await sendMail({
+      to: `${results.customer.email}`,
+      subject: `Your order has been ${results.status}`,
+      template: 'order-confirmation',
+      data: {
+        name: `${results.customer.name}`,
+        order_id: `${results.payment.reference}`,
+        order_total: `${results.totalPrice}`,
+        order_items: `<ul>${html}</ul>`,
+        order_link: 'https://swisstools.store/orders/'
+      }
+    });
+
     res.status(201).json({ success: true, message: "Order Status Updated", results })
   } catch (err) {
     if (err) console.log(err)

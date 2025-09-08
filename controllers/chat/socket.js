@@ -4,7 +4,10 @@ const passport = require('passport');
 const { enterAllRooms, buildMsg } = require("./chatSocket");
 const Users = require("../../models/userModel")
 const Chats = require("../../models/chatSchema")
+const Orders = require("../../models/orderSchema")
+const Notifications = require("../../models/notificationSchema");
 const realtimechats = Chats.watch();
+const realtimeOrders = Orders.watch();
 
 module.exports = function(server, sessionMiddleware) {
   const io = new Server(server);
@@ -41,6 +44,16 @@ module.exports = function(server, sessionMiddleware) {
     }
 
     const data = await unreadMessages();
+
+    const sendNotifications = async () => {
+      const notificationCount = await Notifications.countDocuments();
+      if (!notificationCount) {
+        socket.emit("notifications_count", 0);
+      } else {
+        socket.emit("notifications_count", notificationCount)
+      }
+    }
+    sendNotifications()
     socket.emit("chat_notification", data)
 
     socket.on("getChatThreads", async () => {
@@ -148,6 +161,23 @@ module.exports = function(server, sessionMiddleware) {
       io.to(existingChat.id).emit("newNotification", { userUnreadMessages: existingChat.userUnreadMessages, supportUnreadMessages: existingChat.supportUnreadMessages, id: existingChat.id })
       io.emit("chat_notification", unreadMessagesCount)
     })
+
+    realtimeOrders.on("change", async ({ documentKey }) => {
+      const existingOrder = await Orders.findById(documentKey._id).populate({ path: "customer", select: "name" });
+      if (!existingOrder) {
+        console.log("no chat matches that id");
+        return;
+      }
+
+      const result = await new Notifications({
+        message: `${existingOrder.customer.name} just placed an order`
+      })
+
+      io.emit("newNotification", result)
+
+    })
+
+
     socket.on('disconnect', () => {
       console.log(`${user.name} disconnected`);
     });

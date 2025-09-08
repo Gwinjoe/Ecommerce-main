@@ -1,13 +1,166 @@
-
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { updateHeader } from "./user-details.js";
+
 gsap.registerPlugin(ScrollTrigger);
 import showStatusModal from "./modal.js";
 import { loadingIndicator } from "./loader.js";
 
-console.log("admin-users.js loaded");
 
-/* ---------------------- small helpers ---------------------- */
+updateHeader()
+// initial users fetch (keeps your original approach — relies on module top-level await)
+const response = await fetch("/api/users");
+const results = await response.json();
+const users = results.data;
+
+const tableBody = document.getElementById("userTableBody");
+const modal = document.getElementById("userModal");
+const yearSpan = document.querySelector(".year");
+const menuToggle = document.querySelector(".menu-toggle");
+const headerExtras = document.querySelector(".header-extras");
+const themeToggleBtn = document.querySelector(".theme-toggle-btn");
+const languageToggle = document.querySelector(".language-toggle");
+const languageSelector = document.querySelector(".language-selector");
+const notificationBtn = document.querySelector(".notification-btn");
+const settingsBtn = document.querySelector(".settings-btn");
+const userProfile = document.querySelector(".user-profile");
+const scrollTopBtn = document.querySelector(".scroll-top-btn");
+const newsletterForm = document.querySelector(".footer-newsletter");
+
+let isModalAnimating = false;
+
+// Set current year in footer
+if (yearSpan) {
+  yearSpan.textContent = new Date().getFullYear();
+}
+
+// Header Animations
+gsap.from(".sticky-header", { y: -100, opacity: 0, duration: 0.8, ease: "power2.out", delay: 0.2 });
+gsap.from(".logo", { x: -50, opacity: 0, duration: 0.8, ease: "power2.out", delay: 0.4 });
+gsap.from(".header-extras > *", { x: 50, opacity: 0, duration: 0.8, stagger: 0.1, ease: "power2.out", delay: 0.6 });
+
+// Footer Animations
+gsap.from(".footer-column", {
+  y: 50,
+  opacity: 0,
+  duration: 0.8,
+  stagger: 0.2,
+  ease: "power2.out",
+  scrollTrigger: { trigger: ".site-footer", start: "top 80%", toggleActions: "play none none none" }
+});
+gsap.from(".footer-bottom", {
+  y: 20,
+  opacity: 0,
+  duration: 0.8,
+  ease: "power2.out",
+  scrollTrigger: { trigger: ".footer-bottom", start: "top 90%", toggleActions: "play none none none" }
+});
+
+// Scroll to Top Button
+if (scrollTopBtn) {
+  scrollTopBtn.addEventListener("click", () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+  ScrollTrigger.create({
+    trigger: document.body,
+    start: "top -200",
+    end: "bottom bottom",
+    onUpdate: (self) => {
+      scrollTopBtn.classList.toggle("active", self.progress > 0.1);
+    }
+  });
+}
+
+// Menu Toggle
+if (menuToggle && headerExtras) {
+  menuToggle.addEventListener("click", () => {
+    headerExtras.classList.toggle("active");
+    gsap.to(headerExtras, {
+      height: headerExtras.classList.contains("active") ? "auto" : 0,
+      opacity: headerExtras.classList.contains("active") ? 1 : 0,
+      duration: 0.3,
+      ease: "power2.out"
+    });
+  });
+}
+
+// Theme Toggle
+if (themeToggleBtn) {
+  themeToggleBtn.addEventListener("click", () => {
+    document.body.classList.toggle("dark-mode");
+    const isDark = document.body.classList.contains("dark-mode");
+    const icon = themeToggleBtn.querySelector("i");
+    if (icon) {
+      icon.classList.toggle("fa-moon", !isDark);
+      icon.classList.toggle("fa-sun", isDark);
+    }
+  });
+}
+
+// Language Selector
+if (languageToggle && languageSelector) {
+  languageToggle.addEventListener("click", () => {
+    languageSelector.classList.toggle("active");
+  });
+  document.querySelectorAll(".language-options li").forEach(item => {
+    item.addEventListener("click", () => {
+      const lang = item.getAttribute("data-lang");
+      console.log(`Language selected: ${lang}`);
+      languageSelector.classList.remove("active");
+    });
+  });
+}
+
+// Profile Dropdown
+if (userProfile) {
+  userProfile.addEventListener("click", () => {
+    userProfile.classList.toggle("active");
+  });
+}
+
+// Notification Button
+if (notificationBtn) {
+  notificationBtn.addEventListener("click", () => {
+    console.log("Notifications opened");
+  });
+}
+
+// Settings Button
+if (settingsBtn) {
+  settingsBtn.addEventListener("click", () => {
+    console.log("Settings opened");
+  });
+}
+
+// Newsletter Subscription
+if (newsletterForm) {
+  const btn = newsletterForm.querySelector("button");
+  const input = newsletterForm.querySelector("input");
+  if (btn && input) {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const email = input.value.trim();
+      if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        console.log(`Subscribed with email: ${email}`);
+        input.value = "";
+      } else {
+        console.log("Invalid email");
+      }
+    });
+  }
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener("click", (e) => {
+  if (languageSelector && languageToggle && !languageSelector.contains(e.target) && !languageToggle.contains(e.target)) {
+    languageSelector.classList.remove("active");
+  }
+  if (userProfile && !userProfile.contains(e.target)) {
+    userProfile.classList.remove("active");
+  }
+});
+
+/* ---------------------- helpers ---------------------- */
 
 function escapeHtml(str = "") {
   return String(str)
@@ -18,71 +171,98 @@ function escapeHtml(str = "") {
     .replace(/>/g, "&gt;");
 }
 
-function sanitizeInput(input = "") {
-  return String(input).trim();
+function sanitizeInput(input) {
+  const div = document.createElement("div");
+  div.textContent = input;
+  return div.innerHTML;
 }
 
-async function fetchJson(endpoint, { showSpinner = false } = {}) {
-  try {
-    if (showSpinner) loadingIndicator.show("Loading...");
-    const res = await fetch(endpoint);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json(); // expects { success, data, meta }
-  } catch (err) {
-    console.error("fetchJson error:", err, endpoint);
-    return { success: false, data: [], meta: {} };
-  } finally {
-    if (showSpinner) loadingIndicator.hide();
-  }
-}
+/* ---------------------- Confirmation modal (robust) ---------------------- */
 
-/* ---------------------- accessible confirm modal ---------------------- */
-
-function showConfirmModal(message = "Are you sure?", { confirmText = "Delete", cancelText = "Cancel" } = {}) {
+/**
+ * showConfirmModal(message, opts) -> Promise<boolean>
+ * Creates an accessible confirm dialog, traps focus and returns true if confirmed.
+ */
+function showConfirmModal(message = "Are you sure?", { confirmText = "Yes", cancelText = "Cancel" } = {}) {
   return new Promise((resolve) => {
-    if (document.querySelector('.confirm-overlay')) {
-      resolve(false);
-      return;
-    }
+    // Remove any leftover overlays (defensive)
+    const existing = document.querySelector(".confirm-overlay");
+    if (existing) existing.remove();
 
     const previousActive = document.activeElement;
-    const overlay = document.createElement('div');
-    overlay.className = 'confirm-overlay';
+    const overlay = document.createElement("div");
+    overlay.className = "confirm-overlay";
     overlay.style.cssText = `
-      position: fixed; inset:0; display:flex; align-items:center; justify-content:center;
-      background: rgba(0,0,0,0.45); z-index: 9999; padding: 16px;
+      position: fixed;
+      inset: 0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background: rgba(0,0,0,0.45);
+      z-index: 12000;
+      padding: 16px;
+      backdrop-filter: blur(2px);
     `;
 
-    const dialog = document.createElement('div');
-    dialog.className = 'confirm-dialog';
-    dialog.setAttribute('role', 'dialog');
-    dialog.setAttribute('aria-modal', 'true');
+    const dialog = document.createElement("div");
+    dialog.className = "confirm-dialog";
+    dialog.setAttribute("role", "dialog");
+    dialog.setAttribute("aria-modal", "true");
     dialog.style.cssText = `
-      background:#fff; padding:18px; border-radius:8px; max-width:460px; width:100%;
-      box-shadow:0 10px 30px rgba(0,0,0,0.25); text-align:center; outline: none;
+      background: var(--surface, #fff);
+      color: var(--text, #111);
+      padding:18px;
+      border-radius:12px;
+      max-width:480px;
+      width:100%;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      text-align:center;
+      font-family: inherit;
+      transform: translateY(8px);
+      opacity: 0;
     `;
+
     dialog.innerHTML = `
-      <h2 style="margin:0 0 12px; font-size:18px;">${escapeHtml(message)}</h2>
-      <div style="display:flex; gap:12px; justify-content:center;">
-        <button class="confirm-cancel" type="button" style="padding:8px 14px; border-radius:6px; background:#eee; border:0;">${escapeHtml(cancelText)}</button>
-        <button class="confirm-yes" type="button" style="padding:8px 14px; border-radius:6px; background:#d9534f; color:#fff; border:0;">${escapeHtml(confirmText)}</button>
+      <div style="font-size:16px; margin-bottom:16px;">${escapeHtml(message)}</div>
+      <div style="display:flex; gap:10px; justify-content:center; margin-top:4px;">
+        <button class="confirm-cancel" type="button" style="padding:8px 14px; border-radius:8px; background:#f0f0f0; border:0;">${escapeHtml(cancelText)}</button>
+        <button class="confirm-yes" type="button" style="padding:8px 14px; border-radius:8px; background:#d9534f; color:#fff; border:0;">${escapeHtml(confirmText)}</button>
       </div>
     `;
+
     overlay.appendChild(dialog);
     document.body.appendChild(overlay);
 
-    const prevBodyOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    // animate dialog entrance
+    requestAnimationFrame(() => {
+      dialog.style.transition = "all 220ms cubic-bezier(.2,.9,.2,1)";
+      dialog.style.transform = "translateY(0)";
+      dialog.style.opacity = "1";
+    });
 
-    const yesBtn = dialog.querySelector('.confirm-yes');
-    const noBtn = dialog.querySelector('.confirm-cancel');
+    const yesBtn = dialog.querySelector(".confirm-yes");
+    const noBtn = dialog.querySelector(".confirm-cancel");
+    const focusable = Array.from(dialog.querySelectorAll("button"));
+    const firstFocusable = focusable[0];
+    const lastFocusable = focusable[focusable.length - 1];
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
 
-    const focusable = Array.from(dialog.querySelectorAll('button'));
-    const firstFocusable = focusable[0] || yesBtn;
-    const lastFocusable = focusable[focusable.length - 1] || noBtn;
+    function cleanup(result) {
+      window.removeEventListener("keydown", onKey);
+      overlay.remove();
+      document.body.style.overflow = prevOverflow || "";
+      if (previousActive && typeof previousActive.focus === "function") previousActive.focus();
+      resolve(Boolean(result));
+    }
 
-    const trap = (e) => {
-      if (e.key === 'Tab') {
+    function onKey(e) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        cleanup(false);
+      } else if (e.key === "Tab") {
+        // trap focus within dialog
+        if (focusable.length === 0) { e.preventDefault(); return; }
         if (e.shiftKey) {
           if (document.activeElement === firstFocusable) {
             e.preventDefault();
@@ -94,279 +274,194 @@ function showConfirmModal(message = "Are you sure?", { confirmText = "Delete", c
             firstFocusable.focus();
           }
         }
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        cleanup(false);
       }
-    };
-
-    const cleanup = (result) => {
-      window.removeEventListener('keydown', trap);
-      if (previousActive && typeof previousActive.focus === 'function') previousActive.focus();
-      document.body.style.overflow = prevBodyOverflow || '';
-      if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
-      resolve(Boolean(result));
-    };
-
-    yesBtn.addEventListener('click', () => cleanup(true));
-    noBtn.addEventListener('click', () => cleanup(false));
-
-    overlay.addEventListener('mousedown', (e) => {
-      if (e.target === overlay) cleanup(false);
-    });
-
-    window.addEventListener('keydown', trap);
-    setTimeout(() => (firstFocusable || yesBtn).focus(), 10);
-  });
-}
-
-/* ---------------------- DOM refs & state ---------------------- */
-
-const refs = {
-  tableBody: document.getElementById("userTableBody"),
-  modal: document.getElementById("userModal"),
-  yearSpan: document.querySelector(".year"),
-  menuToggle: document.querySelector(".menu-toggle"),
-  headerExtras: document.querySelector(".header-extras"),
-  themeToggleBtn: document.querySelector(".theme-toggle-btn"),
-  languageToggle: document.querySelector(".language-toggle"),
-  languageSelector: document.querySelector(".language-selector"),
-  notificationBtn: document.querySelector(".notification-btn"),
-  settingsBtn: document.querySelector(".settings-btn"),
-  userProfile: document.querySelector(".user-profile"),
-  scrollTopBtn: document.querySelector(".scroll-top-btn"),
-  newsletterForm: document.querySelector(".footer-newsletter"),
-  searchInput: document.getElementById("searchInput"),
-  sortSelect: document.getElementById("sortSelect"),
-  pageInfo: document.querySelector("#page-info"),
-  firstBtn: document.querySelector("#first-page"),
-  prevBtn: document.querySelector("#prev-page"),
-  nextBtn: document.querySelector("#next-page"),
-  lastBtn: document.querySelector("#last-page"),
-  saveButton: () => document.querySelector(".save-user")
-};
-
-const state = {
-  currentPage: 1,
-  perPage: 10,
-  totalPages: 1,
-  totalUsers: 0,
-  currentSort: 'name',
-  currentSearch: '',
-  pageCache: {}, // key: filter|search|sort|perPage|page
-  usersOnPage: []
-};
-
-/* ---------------------- UI animations ---------------------- */
-
-if (refs.yearSpan) refs.yearSpan.textContent = new Date().getFullYear();
-
-gsap.from(".sticky-header", { y: -100, opacity: 0, duration: 0.8, ease: "power2.out", delay: 0.2 });
-gsap.from(".logo", { x: -50, opacity: 0, duration: 0.8, ease: "power2.out", delay: 0.4 });
-gsap.from(".header-extras > *", { x: 50, opacity: 0, duration: 0.8, stagger: 0.1, ease: "power2.out", delay: 0.6 });
-
-gsap.from(".footer-column", {
-  y: 50, opacity: 0, duration: 0.8, stagger: 0.2, ease: "power2.out",
-  scrollTrigger: { trigger: ".site-footer", start: "top 80%", toggleActions: "play none none none" }
-});
-gsap.from(".footer-bottom", {
-  y: 20, opacity: 0, duration: 0.8, ease: "power2.out",
-  scrollTrigger: { trigger: ".footer-bottom", start: "top 90%", toggleActions: "play none none none" }
-});
-
-/* ---------------------- page cache helpers ---------------------- */
-
-function cacheKey({ page = state.currentPage, perPage = state.perPage, search = state.currentSearch, sort = state.currentSort } = {}) {
-  return `${search}|${sort}|${perPage}|${page}`;
-}
-
-function buildQuery({ page = 1, perPage = state.perPage, search = state.currentSearch, sort = state.currentSort } = {}) {
-  const p = new URLSearchParams();
-  p.set("page", page);
-  p.set("limit", perPage);
-  if (search) p.set("search", search);
-  if (sort) p.set("sort", sort);
-  return p.toString();
-}
-
-/* ---------------------- fetching (paginated) ---------------------- */
-
-async function fetchUsersPage(page = 1, { forceReload = false } = {}) {
-  const key = cacheKey({ page });
-  if (!forceReload && state.pageCache[key]) return state.pageCache[key];
-
-  const q = buildQuery({ page });
-  const resp = await fetchJson(`/api/users?${q}`, { showSpinner: true });
-  if (!resp.success) {
-    state.pageCache[key] = { data: [], meta: resp.meta || {} };
-    return state.pageCache[key];
-  }
-
-  const out = { data: Array.isArray(resp.data) ? resp.data : [], meta: resp.meta || {} };
-  state.pageCache[key] = out;
-
-  // prefetch next page in idle time
-  const currentPage = out.meta?.page ?? page;
-  const pages = out.meta?.pages ?? 1;
-  if (currentPage < pages) {
-    const nextPage = currentPage + 1;
-    const nextKey = cacheKey({ page: nextPage });
-    if (!state.pageCache[nextKey]) {
-      const fetchNext = async () => {
-        const r = await fetchJson(`/api/users?${buildQuery({ page: nextPage })}`, { showSpinner: false });
-        if (r.success) state.pageCache[nextKey] = { data: r.data || [], meta: r.meta || {} };
-      };
-      if (typeof window.requestIdleCallback === 'function') requestIdleCallback(fetchNext);
-      else setTimeout(fetchNext, 200);
     }
-  }
 
-  return out;
+    yesBtn.addEventListener("click", () => cleanup(true));
+    noBtn.addEventListener("click", () => cleanup(false));
+    overlay.addEventListener("mousedown", (ev) => { if (ev.target === overlay) cleanup(false); });
+
+    window.addEventListener("keydown", onKey);
+    setTimeout(() => { (firstFocusable || yesBtn).focus(); }, 20);
+  });
 }
 
-/* ---------------------- rendering ---------------------- */
+/* ---------------------- Table Rendering ---------------------- */
 
-function renderTable(users = [], page = 1, totalPages = 1) {
-  if (!refs.tableBody) return;
-  refs.tableBody.innerHTML = "";
-
-  if (!users || users.length === 0) {
-    refs.tableBody.innerHTML = `<tr><td colspan="5" class="no-users">No users found</td></tr>`;
-    if (refs.pageInfo) refs.pageInfo.textContent = `Page ${page} of ${totalPages}`;
-    return;
-  }
-
-  users.forEach(u => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${escapeHtml(u.name || '')}</td>
-      <td>${escapeHtml(u.email || '')}</td>
-      <td>${escapeHtml(String(u.status ?? ''))}</td>
-      <td>${escapeHtml(String(u.admin ?? ''))}</td>
-      <td>
-        <button class="action-btn" data-action="view" data-id="${u._id}" aria-label="View User"><i class="fas fa-eye"></i></button>
-        <button class="action-btn" data-action="edit" data-id="${u._id}" aria-label="Edit User"><i class="fas fa-edit"></i></button>
-        <button class="action-btn" data-action="delete" data-id="${u._id}" aria-label="Delete User"><i class="fas fa-trash-alt"></i></button>
-      </td>
-    `;
-    refs.tableBody.appendChild(tr);
+function renderTable(data) {
+  if (!tableBody) return;
+  tableBody.innerHTML = "";
+  data.forEach(user => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+            <td>${sanitizeInput(user.name)}</td>
+            <td>${sanitizeInput(user.email)}</td>
+            <td>${sanitizeInput(user.status)}</td>
+            <td>${sanitizeInput(user.admin)}</td>
+            <td>
+                <button class="action-btn" data-action="view" data-id="${user._id.toString()}" aria-label="View User"><i class="fas fa-eye"></i></button>
+                <button class="action-btn" data-action="edit" data-id="${user._id.toString()}" aria-label="Edit User"><i class="fas fa-edit"></i></button>
+                <button class="action-btn" data-action="delete" data-id="${user._id.toString()}" aria-label="Delete User"><i class="fas fa-trash-alt"></i></button>
+            </td>
+        `;
+    tableBody.appendChild(row);
   });
-
-  gsap.from(refs.tableBody.querySelectorAll("tr"), { opacity: 0, y: 10, stagger: 0.03, duration: 0.25 });
-
-  if (refs.pageInfo) refs.pageInfo.textContent = `Page ${page} of ${totalPages}`;
-
-  // update pagination UI
-  if (refs.firstBtn) refs.firstBtn.disabled = page === 1;
-  if (refs.prevBtn) refs.prevBtn.disabled = page === 1;
-  if (refs.nextBtn) refs.nextBtn.disabled = page === totalPages;
-  if (refs.lastBtn) refs.lastBtn.disabled = page === totalPages;
+  gsap.from(tableBody.querySelectorAll("tr"), { opacity: 0, y: 10, stagger: 0.06, duration: 0.28 });
 }
 
 /* ---------------------- modal open/close/save ---------------------- */
 
-let isModalAnimating = false;
-
-async function openModal(mode = "view", id = "") {
-  const modal = refs.modal;
+window.openModal = function(mode, id) {
   if (!modal || isModalAnimating) return;
   isModalAnimating = true;
 
-  const titleEl = modal.querySelector("#modalTitle");
-  const userIdInput = modal.querySelector("#userId");
-  const nameInput = modal.querySelector("#userName");
-  const emailInput = modal.querySelector("#userEmail");
-  const passwordInput = modal.querySelector("#password");
-  const statusInput = modal.querySelector("#userStatus");
-  const saveBtn = refs.saveButton ? refs.saveButton() : null;
+  modal.classList.remove("active");
+  gsap.set(".modal-content", { scale: 1, opacity: 1 });
 
-  // reset
-  if (userIdInput) userIdInput.value = "";
-  if (nameInput) nameInput.value = "";
-  if (emailInput) emailInput.value = "";
-  if (passwordInput) passwordInput.value = "";
-  if (statusInput) statusInput.value = "false";
+  const title = document.getElementById("modalTitle");
+  const userIdInput = document.getElementById("userId");
+  const nameInput = document.getElementById("userName");
+  const emailInput = document.getElementById("userEmail");
+  const statusInput = document.getElementById("userStatus");
+  const saveButton = document.querySelector(".save-user");
+  const passwordInput = document.querySelector("#password");
+
+  if (!title || !userIdInput || !nameInput || !emailInput || !statusInput || !saveButton) {
+    isModalAnimating = false;
+    return;
+  }
+
+  userIdInput.value = "";
+  nameInput.value = "";
+  passwordInput.value = "";
+  emailInput.value = "";
+  statusInput.value = "false";
 
   if (mode === "add") {
-    if (titleEl) titleEl.innerHTML = `<i class="fas fa-user-plus"></i> Add User`;
-    if (nameInput) nameInput.disabled = false;
-    if (emailInput) emailInput.disabled = false;
-    if (passwordInput) passwordInput.disabled = false;
-    if (statusInput) statusInput.disabled = false;
-    if (saveBtn) saveBtn.style.display = "block";
+    title.innerHTML = `<i class="fas fa-user-plus"></i> Add User`;
+    nameInput.disabled = false;
+    emailInput.disabled = false;
+    passwordInput.disabled = false;
+    statusInput.disabled = false;
+    saveButton.style.display = "block";
   } else {
-    // fetch user detail from server (fresh) or from cache
-    let user = null;
-    // try to find in cached pages
-    for (const k of Object.keys(state.pageCache)) {
-      const pageData = state.pageCache[k];
-      if (pageData && pageData.data) {
-        user = pageData.data.find(u => String(u._id) === String(id));
-        if (user) break;
-      }
-    }
-    // if not found, fetch single user
-    if (!user) {
-      const resp = await fetchJson(`/api/users/${id}`, { showSpinner: true });
-      if (resp.success) user = resp.data;
-    }
-
+    const user = users.find(u => u._id === id);
     if (!user) {
       isModalAnimating = false;
       showStatusModal("failed", "User not found");
       return;
     }
 
-    if (titleEl) titleEl.innerHTML = `<i class="fas fa-user-${mode === "edit" ? "edit" : "circle"}"></i> ${mode === "edit" ? "Edit" : "View"} User`;
-    if (userIdInput) userIdInput.value = user._id || "";
-    if (nameInput) nameInput.value = user.name || "";
-    if (emailInput) emailInput.value = user.email || "";
-    if (passwordInput) passwordInput.value = "";
-    if (statusInput) statusInput.value = user.admin ? "true" : "false";
+    userIdInput.value = user._id;
+    nameInput.value = user.name;
+    emailInput.value = user.email;
+    passwordInput.value = "";
+    statusInput.value = user.admin;
 
-    const isView = mode === "view";
-    if (nameInput) nameInput.disabled = isView;
-    if (emailInput) emailInput.disabled = isView;
-    if (passwordInput) passwordInput.disabled = isView;
-    if (statusInput) statusInput.disabled = isView;
-    if (saveBtn) saveBtn.style.display = isView ? "none" : "block";
+    title.innerHTML = `<i class="fas fa-user-${mode === "edit" ? "edit" : ""}"></i> ${mode === "edit" ? "Edit" : "View"} User`;
+    nameInput.disabled = mode === "view";
+    emailInput.disabled = mode === "view";
+    statusInput.disabled = mode === "view";
+    passwordInput.disabled = mode === "view";
+    saveButton.style.display = mode === "view" ? "none" : "block";
   }
 
   modal.classList.add("active");
-  gsap.fromTo(modal.querySelector(".modal-content"), { scale: 0.9, opacity: 0 }, {
-    scale: 1, opacity: 1, duration: 0.28, ease: "back.out(1.7)",
-    onComplete: () => { isModalAnimating = false; }
-  });
-}
-
-function closeModal() {
-  const modal = refs.modal;
-  if (!modal || isModalAnimating) return;
-  isModalAnimating = true;
-  gsap.to(modal.querySelector(".modal-content"), {
-    scale: 0.9, opacity: 0, duration: 0.22, ease: "back.in(1.7)",
+  gsap.fromTo(".modal-content", { scale: 0.8, opacity: 0 }, {
+    scale: 1,
+    opacity: 1,
+    duration: 0.3,
+    ease: "back.out(1.7)",
     onComplete: () => {
-      modal.classList.remove("active");
-      gsap.set(modal.querySelector(".modal-content"), { scale: 1, opacity: 1 });
       isModalAnimating = false;
     }
   });
-}
+};
 
-async function saveUser() {
-  const modal = refs.modal;
-  if (!modal) return;
-  const userIdInput = modal.querySelector("#userId");
-  const nameInput = modal.querySelector("#userName");
-  const emailInput = modal.querySelector("#userEmail");
-  const passwordInput = modal.querySelector("#password");
-  const statusInput = modal.querySelector("#userStatus");
+window.closeModal = function() {
+  if (!modal || isModalAnimating) return;
+  isModalAnimating = true;
+  gsap.to(".modal-content", {
+    scale: 0.8,
+    opacity: 0,
+    duration: 0.3,
+    ease: "back.in(1.7)",
+    onComplete: () => {
+      modal.classList.remove("active");
+      gsap.set(".modal-content", { scale: 1, opacity: 1 });
+      isModalAnimating = false;
+    }
+  });
+};
 
-  const id = userIdInput?.value || "";
-  const name = sanitizeInput(nameInput?.value || "");
-  const email = sanitizeInput(emailInput?.value || "");
-  const admin = statusInput?.value === "true";
-  const password = passwordInput?.value || "";
+/* ---------------------- delete with confirmation & robust fetch ---------------------- */
+
+window.deleteUser = async function(id) {
+  try {
+    // show confirm - returns true when confirmed
+    const confirmed = await showConfirmModal("Are you sure you want to delete this user?", { confirmText: "Delete", cancelText: "Cancel" });
+    if (!confirmed) return;
+
+    loadingIndicator.show("Deleting user...");
+    console.log("Attempting to delete user:", id);
+
+    const res = await fetch(`/api/delete_user/${id}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" } // kept for clarity; server may ignore body for DELETE
+    });
+
+    // handle HTTP errors first
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      console.error("deleteUser: server returned non-OK:", res.status, text);
+      loadingIndicator.hide();
+      showStatusModal("failed", `Server returned ${res.status}`);
+      return;
+    }
+
+    // parse JSON safely
+    let json;
+    try {
+      json = await res.json();
+    } catch (err) {
+      console.warn("deleteUser: response not JSON", err);
+      json = { success: false };
+    }
+
+    if (json && json.success) {
+      // remove locally if present
+      const idx = users.findIndex(u => u._id === id);
+      if (idx !== -1) users.splice(idx, 1);
+      renderTable(users);
+      loadingIndicator.hide();
+      showStatusModal("success", json.message || "User deleted");
+    } else {
+      loadingIndicator.hide();
+      showStatusModal("failed", (json && json.message) ? json.message : "Failed to delete user");
+    }
+  } catch (err) {
+    console.error("deleteUser error:", err);
+    loadingIndicator.hide();
+    showStatusModal("failed", "Server error");
+  }
+};
+
+/* ---------------------- save (create/update user) ---------------------- */
+
+window.saveUser = async function() {
+  const userIdInput = document.getElementById("userId");
+  const nameInput = document.getElementById("userName");
+  const emailInput = document.getElementById("userEmail");
+  const passwordInput = document.getElementById("password");
+  const statusInput = document.getElementById("userStatus");
+
+  if (!userIdInput || !nameInput || !emailInput || !statusInput) return;
+
+  const id = userIdInput.value;
+  const name = sanitizeInput(nameInput.value.trim());
+  const email = sanitizeInput(emailInput.value.trim());
+  const status = statusInput.value;
+  const password = passwordInput.value;
 
   if (!name || !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     showStatusModal("failed", "Invalid input");
@@ -376,38 +471,54 @@ async function saveUser() {
   if (id) {
     // update
     loadingIndicator.show("Updating...");
-    try {
-      const res = await fetch("/api/edit_user", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, name, email, admin, password })
-      });
-      const json = await res.json();
-      if (json.success) showStatusModal("success", json.message || "Updated");
-      else showStatusModal("failed", json.message || "Failed to update");
-      // clear cache and reload current page
-      Object.keys(state.pageCache).forEach(k => delete state.pageCache[k]);
-      await loadPage(state.currentPage, { forceReload: true });
-    } catch (err) {
-      console.error("saveUser update error", err);
-      showStatusModal("failed", "Server error");
-    } finally {
+    const user = users.find(u => u._id == id);
+    if (user) {
+      user.name = name;
+      user.email = email;
+      user.status = status;
+      try {
+        const response = await fetch("/api/edit_user", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, name, email, admin: status, password })
+        });
+        if (!response.ok) {
+          const t = await response.text().catch(() => "");
+          console.error("saveUser update server error:", response.status, t);
+          showStatusModal("failed", `Server ${response.status}`);
+        } else {
+          const j = await response.json().catch(() => ({ success: false }));
+          if (j.success) showStatusModal("success", j.message || "Updated");
+          else showStatusModal("failed", j.message || "Failed to update");
+        }
+      } catch (err) {
+        console.error("saveUser update error", err);
+        showStatusModal("failed", "Server error");
+      } finally {
+        loadingIndicator.hide();
+      }
+    } else {
       loadingIndicator.hide();
+      showStatusModal("failed", "User not found");
     }
   } else {
     // create
     loadingIndicator.show("Creating...");
     try {
-      const res = await fetch("/api/add_user", {
+      const response = await fetch("/api/add_user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, admin, password })
+        body: JSON.stringify({ name, email, admin: status, password })
       });
-      const json = await res.json();
-      if (json.success) showStatusModal("success", json.message || "Created");
-      else showStatusModal("failed", json.message || "Failed to create");
-      Object.keys(state.pageCache).forEach(k => delete state.pageCache[k]);
-      await loadPage(1, { forceReload: true });
+      if (!response.ok) {
+        const t = await response.text().catch(() => "");
+        console.error("saveUser create server error:", response.status, t);
+        showStatusModal("failed", `Server ${response.status}`);
+      } else {
+        const j = await response.json().catch(() => ({ success: false }));
+        if (j.success) showStatusModal("success", j.message || "Created");
+        else showStatusModal("failed", j.message || "Failed to create");
+      }
     } catch (err) {
       console.error("saveUser create error", err);
       showStatusModal("failed", "Server error");
@@ -417,168 +528,61 @@ async function saveUser() {
   }
 
   closeModal();
-}
+  await renderNewUsers();
+};
 
-/* ---------------------- delete user ---------------------- */
+/* ---------------------- Event Delegation ---------------------- */
 
-async function deleteUserById(id) {
-  const ok = await showConfirmModal("Are you sure you want to delete this user?", { confirmText: "Delete", cancelText: "Cancel" });
-  if (!ok) return;
+if (tableBody) {
+  tableBody.addEventListener("click", (e) => {
+    const button = e.target.closest(".action-btn");
+    if (!button) return;
 
-  loadingIndicator.show("Deleting user...");
-  try {
-    const res = await fetch(`/api/delete_user/${id}`, { method: "DELETE" });
-    const json = await res.json();
-    if (json.success) showStatusModal("success", json.message || "Deleted");
-    else showStatusModal("failed", json.message || "Failed to delete");
-  } catch (err) {
-    console.error("delete user error", err);
-    showStatusModal("failed", "Server error");
-  } finally {
-    loadingIndicator.hide();
-    // clear cache & reload current page (adjust page if needed)
-    Object.keys(state.pageCache).forEach(k => delete state.pageCache[k]);
-    // If deleting the last item on page, move back a page
-    await loadPage(state.currentPage, { forceReload: true });
-  }
-}
+    const action = button.dataset.action;
+    const id = button.dataset.id;
 
-/* ---------------------- load & orchestration ---------------------- */
-
-async function loadPage(page = 1, { forceReload = false } = {}) {
-  try {
-    const { data, meta } = await fetchUsersPage(page, { forceReload });
-    const items = data || [];
-    const total = meta?.total ?? items.length;
-    const pages = meta?.pages ?? Math.max(1, Math.ceil(total / state.perPage));
-
-    state.currentPage = meta?.page ?? page;
-    state.totalPages = pages;
-    state.totalUsers = total;
-    state.usersOnPage = items;
-
-    renderTable(items, state.currentPage, pages);
-  } catch (err) {
-    console.error("loadPage error", err);
-    if (refs.tableBody) refs.tableBody.innerHTML = `<tr><td colspan="5">Error loading users</td></tr>`;
-  }
-}
-
-/* ---------------------- UI wiring (delegation) ---------------------- */
-
-document.addEventListener("DOMContentLoaded", async () => {
-  // basic header controls (mirrors original)
-  if (refs.menuToggle && refs.headerExtras) {
-    refs.menuToggle.addEventListener("click", () => {
-      refs.headerExtras.classList.toggle("active");
-      gsap.to(refs.headerExtras, {
-        height: refs.headerExtras.classList.contains("active") ? "auto" : 0,
-        opacity: refs.headerExtras.classList.contains("active") ? 1 : 0,
-        duration: 0.3, ease: "power2.out"
-      });
-    });
-  }
-
-  if (refs.themeToggleBtn) {
-    refs.themeToggleBtn.addEventListener("click", () => {
-      document.body.classList.toggle("dark-mode");
-      const isDark = document.body.classList.contains("dark-mode");
-      const i = refs.themeToggleBtn.querySelector("i");
-      i && i.classList.toggle("fa-moon", !isDark);
-      i && i.classList.toggle("fa-sun", isDark);
-    });
-  }
-
-  // scroll to top trigger
-  if (refs.scrollTopBtn) {
-    refs.scrollTopBtn.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
-    ScrollTrigger.create({
-      trigger: document.body,
-      start: "top -200",
-      end: "bottom bottom",
-      onUpdate: (self) => refs.scrollTopBtn.classList.toggle("active", self.progress > 0.1)
-    });
-  }
-
-  // initial load page 1
-  await loadPage(1);
-
-  // animate containers
-  const productsCard = document.querySelector(".products-card");
-  if (productsCard) gsap.from(productsCard, { opacity: 0, y: 40, duration: 0.6, ease: "power2.out" });
-  const controls = document.querySelectorAll(".users-controls, .users-table, .pagination");
-  if (controls && controls.length) gsap.from(controls, { opacity: 0, y: 12, stagger: 0.05, duration: 0.35 });
-
-  // delegated action buttons (view/edit/delete)
-  if (refs.tableBody) {
-    refs.tableBody.addEventListener("click", async (e) => {
-      const btn = e.target.closest(".action-btn");
-      if (!btn) return;
-      const action = btn.dataset.action;
-      const id = btn.dataset.id;
-      if (action === "view") openModal("view", id);
-      else if (action === "edit") openModal("edit", id);
-      else if (action === "delete") deleteUserById(id);
-    });
-  }
-
-  // pagination buttons (if present)
-  if (refs.firstBtn) refs.firstBtn.addEventListener("click", async () => { if (state.currentPage !== 1) await loadPage(1); });
-  if (refs.prevBtn) refs.prevBtn.addEventListener("click", async () => { if (state.currentPage > 1) await loadPage(state.currentPage - 1); });
-  if (refs.nextBtn) refs.nextBtn.addEventListener("click", async () => { if (state.currentPage < state.totalPages) await loadPage(state.currentPage + 1); });
-  if (refs.lastBtn) refs.lastBtn.addEventListener("click", async () => { if (state.currentPage !== state.totalPages) await loadPage(state.totalPages); });
-
-  // search (server-driven)
-  if (refs.searchInput) {
-    let t;
-    refs.searchInput.addEventListener("input", () => {
-      clearTimeout(t);
-      t = setTimeout(async () => {
-        state.currentSearch = sanitizeInput(refs.searchInput.value);
-        // purge cache for this search/sort
-        Object.keys(state.pageCache).forEach(k => delete state.pageCache[k]);
-        state.currentPage = 1;
-        await loadPage(1, { forceReload: true });
-      }, 300);
-    });
-  }
-
-  // sort (server-driven)
-  if (refs.sortSelect) {
-    refs.sortSelect.addEventListener("change", async () => {
-      state.currentSort = refs.sortSelect.value || 'name';
-      Object.keys(state.pageCache).forEach(k => delete state.pageCache[k]);
-      state.currentPage = 1;
-      await loadPage(1, { forceReload: true });
-    });
-  }
-
-  // modal save button
-  const saveBtn = refs.saveButton ? refs.saveButton() : null;
-  if (saveBtn) saveBtn.addEventListener("click", saveUser);
-
-  // modal close via elements inside modal (if any) and global close function
-  document.addEventListener("click", (e) => {
-    if (e.target.matches(".modal-close") || e.target.closest(".modal-close")) {
-      closeModal();
+    if (action === "view" || action === "edit") {
+      openModal(action, id);
+    } else if (action === "delete") {
+      deleteUser(id);
     }
   });
+}
 
-  // Newsletter subscription (kept from original)
-  if (refs.newsletterForm) {
-    const btn = refs.newsletterForm.querySelector("button");
-    const input = refs.newsletterForm.querySelector("input");
-    if (btn && input) {
-      btn.addEventListener("click", () => {
-        const email = input.value.trim();
-        if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-          console.log(`Subscribed with email: ${email}`);
-          input.value = "";
-        } else {
-          console.log("Invalid email");
-        }
-      });
+// Search & Sort
+const searchInput = document.getElementById("searchInput");
+const sortSelect = document.getElementById("sortSelect");
+
+if (searchInput) {
+  searchInput.addEventListener("input", function() {
+    const value = this.value.toLowerCase().trim();
+    const filtered = users.filter(u => u.name.toLowerCase().includes(value) || u.email.toLowerCase().includes(value));
+    renderTable(filtered);
+  });
+}
+
+if (sortSelect) {
+  sortSelect.addEventListener("change", function() {
+    const val = this.value;
+    if (val === "name") {
+      users.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (val === "email") {
+      users.sort((a, b) => a.email.localeCompare(b.email));
     }
+    renderTable(users);
+  });
+}
+
+async function renderNewUsers() {
+  try {
+    const response = await fetch("/api/users");
+    const results = await response.json();
+    renderTable(results.data);
+  } catch (err) {
+    console.error("renderNewUsers error:", err);
   }
-});
+}
+
+// Initial Render
+renderTable(users);
 

@@ -2,13 +2,14 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import showStatusModal from "./modal.js";
 import { loadingIndicator } from "./loader.js"
+import { updateHeader } from "./user-details.js"
 
 gsap.registerPlugin(ScrollTrigger);
 
 // Sample category data (replace with actual data from your backend)
 const urlParams = new URLSearchParams(window.location.search);
 const categoryId = urlParams.get('id');
-
+updateHeader()
 
 const response = await fetch(`/api/brand/${categoryId}`);
 const { result } = await response.json();

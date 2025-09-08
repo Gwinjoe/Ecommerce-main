@@ -19,7 +19,8 @@
       }
     }
     </script>
-  <link rel="stylesheet" href="../assets/css/manage_users.css" /><link rel="icon" type="image/x-icon" href="assets/images/swisstools_logo.png">
+  <link rel="stylesheet" href="../assets/css/manage_users.css" />
+  <link rel="icon" type="image/x-icon" href="assets/images/swisstools_logo.png">
 </head>
 
 <body>
@@ -38,51 +39,50 @@
             <i class="fas fa-moon"></i>
           </button>
         </div>
-        <div class="language-selector">
-          <button type="button" class="language-toggle" title="Select Language" aria-label="Select Language"
-            data-ga-event="language_toggle">
-            <i class="fas fa-globe"></i>
-          </button>
-          <ul class="language-options">
-            <li data-lang="en" data-ga-event="select_language" data-ga-value="en">English</li>
-            <li data-lang="es" data-ga-event="select_language" data-ga-value="es">Español</li>
-            <li data-lang="fr" data-ga-event="select_language" data-ga-value="fr">Français</li>
-          </ul>
-        </div>
-        <div class="notification">
-          <button type="button" class="notification-btn" title="Notifications" aria-label="Notifications"
-            data-ga-event="notification_open">
-            <i class="fas fa-bell"></i>
-            <span class="notification-count">2</span>
-          </button>
-        </div>
-        <div class="user-profile">
-          <img src="../assets/images/team1.jpeg" alt="Admin Profile" class="profile-img">
-          <div class="profile-info">
-            <span class="profile-name">Admin User</span>
-            <span class="profile-status">Active</span>
-          </div>
-          <ul class="profile-dropdown">
-            <li><a href="/admin" data-ga-event="profile_nav" data-ga-value="dashboard"><i
-                  class="fas fa-tachometer-alt"></i> Dashboard</a></li>
-            <li><a href="/admin/manage_users" data-ga-event="profile_nav" data-ga-value="manage_users"><i
-                  class="fas fa-users"></i>
-                Manage Users</a></li>
-            <li><a href="/admin/categories" data-ga-event="profile_nav" data-ga-value="categories"><i
-                  class="fas fa-tags"></i>
-                Categories</a></li>
-            <li><a href="/admin/logout" data-ga-event="profile_nav" data-ga-value="logout"><i
-                  class="fas fa-sign-out-alt"></i>
-                Logout</a></li>
-          </ul>
-        </div>
-        <div class="settings">
-          <button type="button" class="settings-btn" title="Settings" aria-label="Settings"
-            data-ga-event="settings_open">
-            <i class="fas fa-cog"></i>
-          </button>
-        </div>
+        <!-- <div class="language-selector"> -->
+        <!--   <button type="button" class="language-toggle" title="Select Language" aria-label="Select Language" -->
+        <!--     data-ga-event="language_toggle"> -->
+        <!--     <i class="fas fa-globe"></i> -->
+        <!--   </button> -->
+        <!--   <ul class="language-options"> -->
+        <!--     <li data-lang="en" data-ga-event="select_language" data-ga-value="en">English</li> -->
+        <!--     <li data-lang="es" data-ga-event="select_language" data-ga-value="es">Español</li> -->
+        <!--     <li data-lang="fr" data-ga-event="select_language" data-ga-value="fr">Français</li> -->
+        <!--   </ul> -->
+        <!-- </div> -->
+        <!-- <div class="notification"> -->
+        <button type="button" class="notification-btn" title="Notifications" aria-label="Notifications"
+          data-ga-event="notification_open">
+          <i class="fas fa-bell"></i>
+          <span class="notification-count">2</span>
+        </button>
       </div>
+      <div class="user-profile">
+        <img src="../assets/images/team1.jpeg" alt="Admin Profile" class="profile-img">
+        <div class="profile-info">
+          <span class="profile-name">Admin User</span>
+          <span class="profile-status">Active</span>
+        </div>
+        <ul class="profile-dropdown">
+          <li><a href="/admin" data-ga-event="profile_nav" data-ga-value="dashboard"><i
+                class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+          <li><a href="/admin/manage_users" data-ga-event="profile_nav" data-ga-value="manage_users"><i
+                class="fas fa-users"></i>
+              Manage Users</a></li>
+          <li><a href="/admin/categories" data-ga-event="profile_nav" data-ga-value="categories"><i
+                class="fas fa-tags"></i>
+              Categories</a></li>
+          <li><a href="/admin/logout" data-ga-event="profile_nav" data-ga-value="logout"><i
+                class="fas fa-sign-out-alt"></i>
+              Logout</a></li>
+        </ul>
+      </div>
+      <div class="settings">
+        <button type="button" class="settings-btn" title="Settings" aria-label="Settings" data-ga-event="settings_open">
+          <i class="fas fa-cog"></i>
+        </button>
+      </div>
+    </div>
     </div>
   </header>
   <main class="admin-main">

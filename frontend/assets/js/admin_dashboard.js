@@ -1,4 +1,8 @@
+import { updateHeader } from "./user-details.js"
+
+
 document.addEventListener('DOMContentLoaded', function() {
+  updateHeader();
   const socket = io();
   const connectionStatus = document.createElement('div');
   connectionStatus.className = 'connection-status disconnected';
@@ -35,6 +39,9 @@ document.addEventListener('DOMContentLoaded', function() {
     updateChatNotification(data);
   });
 
+  socket.on('notifications_count', (data) => {
+    updateNotificationsCount(data)
+  })
   document.querySelector('.year').textContent = new Date().getFullYear();
 
   document.querySelector('.menu-toggle').addEventListener('click', function() {
@@ -424,6 +431,10 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  function updateNotificationsCount(count) {
+    const notificationCount = document.querySelector('.notification-count');
+    notificationCount.textContent = count;
+  }
   // Function to add notification
   function addNotification(notification) {
     const notificationsList = document.getElementById('notifications-list');
@@ -439,7 +450,7 @@ document.addEventListener('DOMContentLoaded', function() {
     notificationElement.classList.add('notification-item');
     notificationElement.innerHTML = `
             <p>${notification.message}</p>
-            <span>${new Date(notification.date).toLocaleString()}</span>
+            <span>${new Date(notification.createdAt).toLocaleString()}</span>
         `;
 
     // Add to top of list
