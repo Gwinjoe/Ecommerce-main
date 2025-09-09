@@ -24,6 +24,7 @@ function renderTemplateString(templateString, data = {}) {
     login_link: '',
     verification_link: '',
     expiry_minutes: '10',
+    profileImage: '',
   };
 
   // Merge data over defaults
@@ -107,6 +108,13 @@ async function sendMail({ to, subject, template, data = {} }) {
     to,
     subject: subject || `${data.subject || 'Message from ' + (data.store_name || 'swisstools')}`,
     html,
+    attachments: [
+      {
+        filename: "swisstools_logo.png",
+        path: "../frontend/assets/images/swisstools_logo.png",
+        cid: "logo.png", // same cid value as in the html img src
+      },
+    ],
   };
 
   // Optionally verify transporter before sending (uncomment in prod if you want verify)

@@ -81,6 +81,7 @@
       <div class="header"><span style="letter-spacing:0.6px">Order Confirmation — <strong>{{store_name}}</strong></span>
       </div>
       <div class="content">
+        <img style="width: 100px" src="cid:logo.png" alt="logo">
         <p>Hi {{name}},</p>
 
         <p>Thanks for your order! Your <strong>Order ID</strong> is <strong>{{order_id}}</strong>.</p>
@@ -92,7 +93,7 @@
           <div>{{order_items}}</div>
         </div>
 
-        <p><a href="{{order_link}}" class="btn">Track Order</a></p>
+        <p><span>Click here to track your orders: </span><a href="{{order_link}}" class="btn">Track Order</a></p>
 
         <p style="margin-top:12px;color:#666;font-size:13px">We’ll email you shipment updates when your items are on the
           way.</p>
