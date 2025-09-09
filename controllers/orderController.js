@@ -166,7 +166,7 @@ exports.add_order = async (req, res) => {
     const result = await newOrder.save();
     let html = "";
     items.forEach((item) => {
-      const h = `<li>${item.name} x${item.quantity}</li>`
+      const h = `<li><img src="${item.image}" alt="image" style="margin-right: 10px;"/><span>${item.name} x${item.quantity}</span></li>`
       html += h
     })
     await sendMail({
