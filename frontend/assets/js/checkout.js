@@ -145,7 +145,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         },
         items: cart,
         coupon: couponInput.value.trim() || null,
-        totalPrice: calculateTotals(),
+        totalPrice: await calculateTotals(),
         payment: {
           reference: paymentReference,
           transactionId,
@@ -180,7 +180,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const initiatePayment = async () => {
     const config = await fetch("/api/config");
     const { flwpubkey } = await config.json();
-    const totals = calculateTotals();
+    const totals = await calculateTotals();
     const customerName = document.getElementById("full-name").value;
     const customerEmail = document.getElementById("email").value;
     const customerPhone = document.getElementById("phone").value;
