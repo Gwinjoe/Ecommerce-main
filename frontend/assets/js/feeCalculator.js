@@ -54,7 +54,7 @@ export function calculateShippingFee(itemPrice, destination, ratePerKm = 20) {
   let fixedFee = itemPrice * 0.05; // 5%
   let variableFee = distance * ratePerKm;
   let totalFee = fixedFee + variableFee;
-
+  console.log(totalFee)
   return {
     destination: destination,
     distance: distance,

@@ -80,7 +80,7 @@ exports.get_user_orders = async (req, res) => {
   const id = req.user._id;
 
   try {
-    const result = await Orders.find({ customer: id }).populate("customer").populate({ path: "products.product", select: "name price" });
+    const result = await Orders.find({ customer: id }).populate("customer").populate({ path: "products.product", select: "name price images" });
     if (!result) {
       return res.status(401).json({ success: false, message: "No order matches that id" });
     }

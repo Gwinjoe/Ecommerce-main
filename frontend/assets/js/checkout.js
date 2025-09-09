@@ -76,7 +76,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     cartCount.textContent = cart.length;
   };
 
-  const calculateTotals = () => {
+  const calculateTotals = async () => {
     const subtotal = cart.reduce((sum, item) => {
       return sum + parseFloat(item.price) * (item.quantity || 1);
     }, 0);
@@ -86,8 +86,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (discountType === 'fixed') discountAmount = discount;
 
     const stateValue = state.value;
-    const { totalFee } = calculateShippingFee(subtotal, stateValue, 20);
+    console.log(stateValue)
+    const { totalFee } = calculateShippingFee(subtotal, `${stateValue}`, 20);
     shippingCost = parseFloat(totalFee);
+    console.log(`from checkout shipping fee- ${shippingCost}`)
 
     return {
       subtotal,
@@ -97,12 +99,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
   };
 
-  const updateOrderSummary = () => {
-    const totals = calculateTotals();
+  const updateOrderSummary = async () => {
+    const totals = await calculateTotals();
     subtotalElement.textContent = formatCurrency(totals.subtotal);
     discountElement.textContent = formatCurrency(totals.discountAmount);
     totalElement.textContent = formatCurrency(totals.total);
     shippingElement.textContent = formatCurrency(totals.shippingCost);
+    console.log(totals)
   };
 
   const renderOrderItems = () => {
@@ -200,7 +203,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         description: `Payment for ${cart.length} items`,
         logo: "assets/images/swisstools_logo.png",
       },
-      callback: async function (response) {
+      callback: async function(response) {
         try {
           if (response.transaction_id) {
             // verify on backend
@@ -229,7 +232,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           placeOrderBtn.disabled = false;
         }
       },
-      onclose: function () {
+      onclose: function() {
         if (document.body.contains(loader)) document.body.removeChild(loader);
         placeOrderBtn.disabled = false;
       }
@@ -267,6 +270,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderOrderItems();
     applyCouponBtn.addEventListener("click", () => {/* coupon handling stays same */ });
     placeOrderBtn.addEventListener("click", placeOrder);
+    state.addEventListener("change", () => {
+      updateOrderSummary()
+    })
+
   };
 
   initCheckout();

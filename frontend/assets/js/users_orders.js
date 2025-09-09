@@ -149,7 +149,7 @@ document.addEventListener("DOMContentLoaded", () => {
               <div class="order-products">
                 ${order.products.slice(0, 3).map(product => `
                   <div class="product-item">
-                    <img src="assets/images/product-placeholder.jpg" alt="${product.product.name}" class="product-image">
+                    <img src="${product.product.images.mainImage.url}" alt="${product.product.name}" class="product-image">
                     <div class="product-details">
                       <div class="product-name">${product.product.name}</div>
                       <div class="product-price">${formatCurrency(product.totalPrice)}</div>
@@ -288,7 +288,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <div class="order-products">
             ${order.products.map(product => `
               <div class="product-item">
-                <img src="assets/images/product-placeholder.jpg" alt="${product.product.name}" class="product-image">
+                <img src="${product.product.images.mainImage.url}" alt="${product.product.name}" class="product-image">
                 <div class="product-details">
                   <div class="product-name">${product.product.name}</div>
                   <div class="product-price">${formatCurrency(product.product.price)} each</div>
