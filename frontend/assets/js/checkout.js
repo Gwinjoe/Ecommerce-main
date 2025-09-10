@@ -145,7 +145,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         },
         items: cart,
         coupon: couponInput.value.trim() || null,
-        totalPrice: calculateTotals(),
+        totalPrice: await calculateTotals(),
         payment: {
           reference: paymentReference,
           transactionId,
