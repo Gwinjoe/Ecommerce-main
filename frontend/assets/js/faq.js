@@ -165,9 +165,9 @@ ScrollTrigger.create({
   }
 });
 
-// Live Chat Button (Placeholder)
+// Live Chat Button - Redirect to Chat Page
 document.querySelector(".chat-btn").addEventListener("click", () => {
-  alert("Live chat is not yet implemented. Contact us via course the Contact page!");
+  window.location.href = "/chat";
 });
 
 // Particle Animations
