@@ -783,4 +783,3 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.target === elements.compareModal) elements.compareModal.style.display = 'none';
   });
 });
-

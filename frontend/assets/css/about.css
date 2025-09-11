@@ -6,6 +6,11 @@
     overflow: hidden;
 }
 
+.logo-text{
+    text-decoration: none;
+    color: #000;
+}
+
 main .container {
     max-width: 1000px;
     margin: 0 auto;

@@ -256,7 +256,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const price = product.price?.$numberDecimal ? parseFloat(product.price.$numberDecimal) : parseFloat(product.price);
 
       productCard.innerHTML = `
-                        <img src="${product.images?.mainImage?.url || 'assets/images/product-placeholder.jpg'}" 
+                        <img src="${product.images?.mainImage?.url}" 
                              alt="${product.name}" class="product-card-img">
                         <h4>${product.name}</h4>
                         <p>${formatCurrency(price)}</p>

@@ -9,6 +9,11 @@
     --body-font: 'Open Sans', sans-serif;
 }
 
+.logo-text{
+    text-decoration: none;
+    color: #000;
+}
+
 /* Hero Section */
 .faq-hero {
     position: relative;

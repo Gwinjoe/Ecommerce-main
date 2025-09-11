@@ -9,6 +9,11 @@
     --body-font: 'Open Sans', sans-serif;
 }
 
+.logo-text{
+    text-decoration: none;
+    color: #000;
+}
+
 /* Hero Section with Ken Burns Effect */
 .hero-section {
     position: relative;
@@ -134,6 +139,10 @@
 
 .contact-info {
     text-align: left;
+}
+
+.info-item{
+    text-align: center;
 }
 
 .contact-info .info-item {

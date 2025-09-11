@@ -196,9 +196,11 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // Recently added product section
+// Recently added product section
 const recentSwiper = new Swiper(".recent-swiper", {
-  slidesPerView: 1,
+  slidesPerView: "auto",        // auto sizing
   spaceBetween: 20,
+  centeredSlides: true,         // snap to center
   loop: true,
   pagination: {
     el: ".swiper-pagination",
@@ -208,17 +210,20 @@ const recentSwiper = new Swiper(".recent-swiper", {
     nextEl: ".swiper-button-next",
     prevEl: ".swiper-button-prev",
   },
-  breakpoints: {
-    640: {
-      slidesPerView: 2,
+  on: {
+    init: function () {
+      this.slides.forEach(slide => slide.style.opacity = "0.5"); // dim all
+      if (this.slides[this.activeIndex]) {
+        this.slides[this.activeIndex].style.opacity = "1";       // highlight active
+      }
     },
-    768: {
-      slidesPerView: 3,
-    },
-    1024: {
-      slidesPerView: 4,
-    },
-  },
+    slideChange: function () {
+      this.slides.forEach(slide => slide.style.opacity = "0.5");
+      if (this.slides[this.activeIndex]) {
+        this.slides[this.activeIndex].style.opacity = "1";
+      }
+    }
+  }
 });
 
 // Search logic

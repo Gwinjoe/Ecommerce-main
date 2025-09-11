@@ -4,6 +4,13 @@
     padding: 0 20px;
 }
 
+.logo-text{
+    text-decoration: none;
+    color: #000;
+    font-family: 'Iceberg', sans-serif;
+    font-weight: bold;
+}
+
 .product-details {
     display: flex;
     gap: 30px;
@@ -27,9 +34,8 @@
 
 .main-image {
     width: 100%;
-    max-width: 400px;
-    max-height: 300px;
-    overflow: hidden;
+    height: auto;
+    object-fit: contain;
 }
 
 .main-image img {
@@ -72,7 +78,7 @@
 .product-title {
     font-family: var(--headline-font);
     font-size: 1.8rem;
-    color: var(--headline-color);
+    color: #000;
     margin-bottom: 10px;
 }
 
