@@ -50,11 +50,20 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById('profile-status').textContent = user.status || (user.active ? 'Active' : 'Inactive');
     document.getElementById('profile-created').textContent = new Date(user.createdAt).toLocaleDateString();
 
-    // Update header profile info
+    /// Update profile name
     const profileNameElements = document.querySelectorAll('.profile-name');
+
+    // Safely format and update all profile name elements
+    const formattedName = (user?.name || "")
+      .split(" ")
+      .filter(Boolean) // remove extra spaces
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+
     profileNameElements.forEach(el => {
-      el.textContent = user.name;
+      el.textContent = formattedName || "Guest";
     });
+
 
     // Pre-fill edit form
     document.getElementById('edit-name').value = user.name;

@@ -287,7 +287,7 @@
 /* Chat Button */
 .chat-btn {
     position: fixed;
-    bottom: 20px;
+    bottom: 90px;
     right: 20px;
     background-color: var(--primary-color);
     color: #fff;
@@ -384,8 +384,16 @@
     }
 
     .chat-btn {
-        padding: 12px 15px;
-        font-size: 0.9rem;
+        bottom: 90px;
+            right: 25px;
+            border-radius: 50%;
+            padding: 10px;
+            text-align: center;
+            font-size: 24px;
+    }
+
+    .chat-text{
+        display: none;
     }
 
     .progress-bar {
@@ -432,10 +440,5 @@
 
     .cta-btn {
         padding: 10px 20px;
-    }
-
-    .chat-btn {
-        padding: 10px 12px;
-        font-size: 0.8rem;
     }
 }

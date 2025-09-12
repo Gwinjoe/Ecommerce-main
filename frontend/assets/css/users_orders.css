@@ -51,6 +51,15 @@ body {
   gap: 20px;
 }
 
+.logo{
+  display: flex;
+  align-items: center;
+}
+
+.logo-text{
+  margin-left: 10px;
+}
+
 .logo a {
   font-family: 'Iceberg', sans-serif;
   font-size: 2rem;
@@ -195,12 +204,15 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  transition: background-color 0.3s ease;
+  padding: 5px 5px;
+  border-radius: 8px;
+  transition: background-color 0.5s ease-in-out;
 }
 
 .profile-dropdown li a:hover {
   background-color: var(--primary-color);
   color: #fff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
 .user-profile.active .profile-dropdown {

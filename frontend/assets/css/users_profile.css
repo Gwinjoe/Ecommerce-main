@@ -52,6 +52,11 @@ body {
     gap: 20px;
 }
 
+.logo{
+    display: flex;
+    align-items: center;
+}
+
 .logo a {
     font-family: 'Iceberg', sans-serif;
     font-size: 2rem;

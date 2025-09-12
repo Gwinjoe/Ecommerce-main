@@ -4,17 +4,28 @@
     padding: 0 20px;
 }
 
-.logo-img{
+.logo-img {
     width: 40px;
     height: 40px;
 }
+
+.logo {
+    display: flex;
+    align-items: center;
+}
+
+.logo a {
+    text-decoration: none;
+    color: #000;
+}
+
 
 .cart-title {
     font-family: var(--headline-font);
     font-size: 1.8rem;
     color: var(--headline-color);
     text-align: center;
-    margin-bottom: 30px; 
+    margin-bottom: 30px;
 }
 
 .cart-content {

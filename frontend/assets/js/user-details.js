@@ -62,9 +62,18 @@ export const updateHeader = async () => {
 
       // Update profile name
       const profileNameElements = document.querySelectorAll('.profile-name');
+
+      // Safely format and update all profile name elements
+      const formattedName = (user?.name || "")
+        .split(" ")
+        .filter(Boolean) // remove extra spaces
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+
       profileNameElements.forEach(el => {
-        el.textContent = user.name;
+        el.textContent = formattedName || "Guest";
       });
+
 
       // Update profile status
       const profileStatusElements = document.querySelectorAll('.profile-status');

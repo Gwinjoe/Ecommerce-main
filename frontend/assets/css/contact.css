@@ -282,3 +282,60 @@
         padding: 10px 20px;
     }
 }
+
+/* Sticky Chat Button */
+.chat-btn{
+    position: fixed;
+    bottom: 30px;
+    right: 75px;
+    z-index: 1000;
+    background-color: var(--primary-color);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    width: auto;
+    height: auto;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    text-decoration: none;
+    font-size: 18px;
+    padding: 10px 20px;
+    font-weight: bold;
+}
+
+.fa-headset{
+    margin-right: 5px;
+}
+
+.chat-btn:hover {
+    background-color: #d47518;
+    transform: translateY(-3px);
+}
+
+.chat-btn:active {
+    transform: translateY(0);
+}
+
+.chat-btn i {
+    pointer-events: none;
+}
+
+/* Respnosive Styles */
+@media (max-width: 768px) {
+    .chat-btn{
+        bottom: 30px;
+        right: 10px;
+        border-radius: 50%;
+        padding: 10px;
+        text-align: center;
+        font-size: 24px;
+    }
+
+    .chat-text{
+        display: none;
+    }
+}

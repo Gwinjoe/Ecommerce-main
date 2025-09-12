@@ -52,6 +52,11 @@ body {
     gap: 20px;
 }
 
+.logo {
+    display: flex;
+    align-items: center;
+}
+
 .logo a {
     font-family: 'Iceberg', sans-serif;
     font-size: 2rem;
@@ -222,7 +227,9 @@ body {
     display: flex;
     align-items: center;
     gap: 10px;
-    transition: background-color 0.3s ease;
+    padding: 5px 5px;
+    border-radius: 5px;
+    transition: background-color 0.3s ease-in-out;
 }
 
 .profile-dropdown li a:hover {
@@ -236,22 +243,42 @@ body {
 
 @media (max-width: 768px) {
     .user-profle {
-        gap: unset;
+        gap: unset
+    }
+
+    .profile-info {
+        margin-top: 0;
     }
 }
 
 /* Dashboard Main */
 .dashboard-main {
+    display: flex;
+    align-items: center;
+    margin: 0 auto;
     flex: 1;
     background-color: #f9f9f9;
     padding: 30px;
+    width: 80%;
+}
+
+.dashboard-content {
+    margin: 0 auto;
 }
 
 .dashboard-content h1 {
     font-family: var(--headline-font);
     font-size: 2rem;
     color: var(--headline-color);
-    margin-bottom: 20px;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.dashboard-content p {
+    margin-bottom: 10px;
+    color: var(--text-color);
+    font-family: var(--body-font);
+    text-align: center;
 }
 
 .overview h2,
@@ -266,6 +293,10 @@ body {
 
 .overview {
     position: relative;
+}
+
+.overview h2{
+    text-align: center;
 }
 
 .refresh-metrics-btn {
@@ -790,8 +821,9 @@ body {
 @media (max-width: 768px) {
     .sticky-header .container {
         flex-direction: column;
+        justify-content: space-between;
         align-items: flex-start;
-        gap: 15px;
+        gap: 10px;
     }
 
     .sticky-header .container::before {
@@ -847,6 +879,11 @@ body {
 
     .dashboard-main {
         padding: 20px;
+        width: auto;
+    }
+
+    .dashboard-content {
+        width: auto;
     }
 
     .dashboard-content h1 {
