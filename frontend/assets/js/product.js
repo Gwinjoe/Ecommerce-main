@@ -1,60 +1,73 @@
 import { gsap } from "gsap";
-import { updateHeaderView } from "./user-details.js"
+import { updateHeaderView } from "./user-details.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   const urlParams = new URLSearchParams(window.location.search);
-  const productId = urlParams.get('id');
+  const productId = urlParams.get("id");
 
-  updateHeaderView()
-  const spinner = document.getElementById('spinner');
-  const productTitle = document.getElementById('productTitle');
-  const productCategory = document.getElementById('productCategory');
-  const productPrice = document.getElementById('productPrice');
-  const productDescription = document.getElementById('productDescription');
-  const mainImage = document.getElementById('mainImage');
-  const thumbnailGallery = document.getElementById('thumbnailGallery');
-  const productBadges = document.getElementById('productBadges');
-  const addToCartBtn = document.getElementById('addToCartBtn');
-  const cartCount = document.querySelector('.cart-count');
-  const stock = document.querySelector('#stock');
-  const stockError = document.querySelector('#stockError');
-  const stockContainer = document.querySelector('#stockContainer');
-  const relatedProducts = document.getElementById('relatedProducts');
+  updateHeaderView();
 
-  let cart = JSON.parse(localStorage.getItem('cart')) || [];
+  // DOM References
+  const spinner = document.getElementById("spinner");
+  const productTitle = document.getElementById("productTitle");
+  const productCategory = document.getElementById("productCategory");
+  const productPrice = document.getElementById("productPrice");
+  const productDescription = document.getElementById("productDescription");
+  const mainImage = document.getElementById("mainImage");
+  const thumbnailGallery = document.getElementById("thumbnailGallery");
+  const productBadges = document.getElementById("productBadges");
+  const addToCartBtn = document.getElementById("addToCartBtn");
+  const cartCount = document.querySelector(".cart-count");
+  const stock = document.querySelector("#stock");
+  const stockError = document.querySelector("#stockError");
+  const stockContainer = document.querySelector("#stockContainer");
+  const relatedProducts = document.getElementById("relatedProducts");
+
+  let cart = JSON.parse(localStorage.getItem("cart")) || [];
   let currentProduct = null;
 
+  // 🆕 Clear Dummy Data on Initial Load
+  productTitle.textContent = "";
+  productCategory.textContent = "";
+  productPrice.textContent = "";
+  productDescription.textContent = "";
+  mainImage.src = "";
+  thumbnailGallery.innerHTML = "";
+  productBadges.innerHTML = "";
+  document.querySelector(".keyfeatures").innerHTML = "";
+  document.querySelector("#inTheBox").innerHTML = "";
+  document.querySelector("#productDetails").textContent = "";
+  relatedProducts.innerHTML = "";
+
+  // Utility: Format currency
   const formatCurrency = (amount) => {
-    const value = amount?.$numberDecimal ? parseFloat(amount.$numberDecimal) : parseFloat(amount);
-    return `₦${value.toLocaleString('en-NG', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    })}`;
+    const value =
+      amount?.$numberDecimal ? parseFloat(amount.$numberDecimal) : parseFloat(amount);
+    return isNaN(value)
+      ? "₦0.00"
+      : `₦${value.toLocaleString("en-NG", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`;
   };
 
-  const showSpinner = () => {
-    spinner.style.display = 'block';
+  // Spinner toggle
+  const toggleSpinner = (show) => {
+    spinner.style.display = show ? "block" : "none";
   };
 
-  const hideSpinner = () => {
-    spinner.style.display = 'none';
-  };
-
+  // Cart Feedback
   const showCartFeedback = (message) => {
-    const feedback = document.createElement('div');
-    feedback.className = 'cart-feedback';
+    const feedback = document.createElement("div");
+    feedback.className = "cart-feedback";
     feedback.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
     document.body.appendChild(feedback);
 
+    requestAnimationFrame(() => feedback.classList.add("show"));
     setTimeout(() => {
-      feedback.classList.add('show');
-      setTimeout(() => {
-        feedback.classList.remove('show');
-        setTimeout(() => {
-          document.body.removeChild(feedback);
-        }, 300);
-      }, 2000);
-    }, 10);
+      feedback.classList.remove("show");
+      setTimeout(() => feedback.remove(), 300);
+    }, 2000);
   };
 
   const updateCartCount = () => {
@@ -62,14 +75,11 @@ document.addEventListener("DOMContentLoaded", () => {
     cartCount.textContent = totalItems;
   };
 
+  // Fetch Product
   const fetchProductData = async () => {
-    if (!productId) {
-      alert('Product ID not found in URL');
-      return;
-    }
+    if (!productId) return console.error("❌ Product ID missing in URL");
 
-    showSpinner();
-
+    toggleSpinner(true);
     try {
       const response = await fetch(`/api/product/${productId}`);
       const data = await response.json();
@@ -77,107 +87,97 @@ document.addEventListener("DOMContentLoaded", () => {
       if (data.success) {
         currentProduct = data.result;
         populateProductData(currentProduct);
-        fetchRelatedProducts(currentProduct.category._id);
+        fetchRelatedProducts(currentProduct.category?._id);
       } else {
-        alert('Product not found');
+        productTitle.textContent = "⚠️ Product not found";
       }
-    } catch (error) {
-      console.error('Error fetching product:', error);
-      alert('Error loading product details');
+    } catch (err) {
+      console.error("Error fetching product:", err);
+      productTitle.textContent = "⚠️ Error loading product";
     } finally {
-      hideSpinner();
+      toggleSpinner(false);
     }
   };
 
+  // Populate Product Details
   const populateProductData = (product) => {
     productTitle.textContent = product.name;
-    productCategory.textContent = `Category: ${product.category?.name || 'Uncategorized'}`;
+    productCategory.textContent = `Category: ${product.category?.name || "Uncategorized"}`;
     productPrice.textContent = formatCurrency(product.price);
+    productDescription.textContent = product.description || "No description available";
+
     if (product.stock) {
       stock.value = product.stock;
+      stockContainer.style.display = "block";
+      stockError.style.display = "none";
     } else {
       stockContainer.style.display = "none";
       stockError.style.display = "block";
     }
-    productDescription.textContent = product.description || 'No description available';
-    let featuresHtml = "";
-    product.keyFeatures.forEach(feature => {
-      let html = `<li><i class="fas fa-check-circle"></i>
-                  ${feature}</li>`
-      featuresHtml += html;
-    })
-    document.querySelector(".keyfeatures").innerHTML = featuresHtml || "Features unavailable for this product"
 
-    let boxHtml = "";
-    product.whatsInBox.forEach(item => {
-      let html = `<li>${item}</li>`
-      boxHtml += html;
-    })
-    document.querySelector("#inTheBox").innerHTML = boxHtml || "No Item In Box"
+    document.querySelector(".keyfeatures").innerHTML =
+      product.keyFeatures?.length
+        ? product.keyFeatures.map(f => `<li><i class="fas fa-check-circle"></i> ${f}</li>`).join("")
+        : "Features unavailable for this product";
 
-    document.querySelector("#productDetails").textContent = product.productDetails || "No Detail available for this product."
+    document.querySelector("#inTheBox").innerHTML =
+      product.whatsInBox?.length
+        ? product.whatsInBox.map(i => `<li>${i}</li>`).join("")
+        : "No Item In Box";
 
-    // Set main image
-    if (product.images?.mainImage?.url) {
-      mainImage.src = product.images.mainImage.url;
-      mainImage.alt = product.name;
-    }
+    document.querySelector("#productDetails").textContent =
+      product.productDetails || "No Detail available for this product.";
 
-    // Create thumbnails
-    thumbnailGallery.innerHTML = '';
-
-    // Add main image as first thumbnail
-    if (product.images?.mainImage?.url) {
-      const mainThumb = document.createElement('img');
-      mainThumb.src = product.images.mainImage.url;
-      mainThumb.alt = 'Main thumbnail';
-      mainThumb.className = 'thumbnail';
-      mainThumb.addEventListener('click', () => {
-        switchImage(product.images.mainImage.url);
-      });
-      thumbnailGallery.appendChild(mainThumb);
-    }
-
-    // Add additional images as thumbnails
-    if (product.images?.thumbnails) {
-      product.images.thumbnails.forEach(img => {
-        const thumb = document.createElement('img');
-        thumb.src = img.url;
-        thumb.alt = 'Product thumbnail';
-        thumb.className = 'thumbnail';
-        thumb.addEventListener('click', () => {
-          switchImage(img.url);
-        });
-        thumbnailGallery.appendChild(thumb);
-      });
-    }
-
-    // Add badges
-    productBadges.innerHTML = '';
-    if (product.isTrending) {
-      const badge = document.createElement('span');
-      badge.className = 'badge trending';
-      badge.textContent = 'Trending';
-      productBadges.appendChild(badge);
-    }
-    if (product.isNew) {
-      const badge = document.createElement('span');
-      badge.className = 'badge new';
-      badge.textContent = 'New';
-      productBadges.appendChild(badge);
-    }
-    if (product.isBestSeller) {
-      const badge = document.createElement('span');
-      badge.className = 'badge best';
-      badge.textContent = 'Best Seller';
-      productBadges.appendChild(badge);
-    }
-
-    // Set up add to cart button
-    addToCartBtn.addEventListener('click', addToCart);
+    setupImages(product.images);
+    setupBadges(product);
+    setupAddToCart();
   };
 
-  // Switch image
+  // Setup Images
+  const setupImages = (images) => {
+    thumbnailGallery.innerHTML = "";
+
+    const createThumb = (src) => {
+      const img = document.createElement("img");
+      img.src = src;
+      img.alt = "Product thumbnail";
+      img.className = "thumbnail";
+      img.addEventListener("click", () => switchImage(src));
+      thumbnailGallery.appendChild(img);
+    };
+
+    if (images?.mainImage?.url) {
+      mainImage.src = images.mainImage.url;
+      createThumb(images.mainImage.url);
+    }
+
+    images?.thumbnails?.forEach(img => createThumb(img.url));
+  };
+
+  const setupBadges = (product) => {
+    productBadges.innerHTML = "";
+    const badgeMap = {
+      isTrending: { text: "Trending", class: "trending" },
+      isNew: { text: "New", class: "new" },
+      isBestSeller: { text: "Best Seller", class: "best" },
+    };
+
+    Object.entries(badgeMap).forEach(([key, val]) => {
+      if (product[key]) {
+        const badge = document.createElement("span");
+        badge.className = `badge ${val.class}`;
+        badge.textContent = val.text;
+        productBadges.appendChild(badge);
+      }
+    });
+  };
+
+  const setupAddToCart = () => {
+    addToCartBtn.replaceWith(addToCartBtn.cloneNode(true)); // removes old listeners
+    const newBtn = document.getElementById("addToCartBtn");
+    newBtn.addEventListener("click", addToCart);
+  };
+
   const switchImage = (newSrc) => {
     gsap.to(mainImage, {
       opacity: 0,
@@ -185,140 +185,81 @@ document.addEventListener("DOMContentLoaded", () => {
       onComplete: () => {
         mainImage.src = newSrc;
         gsap.to(mainImage, { opacity: 1, duration: 0.3 });
-      }
+      },
     });
   };
 
-  // Add to cart
   const addToCart = () => {
     if (!currentProduct) return;
 
-    const quantity = parseInt(document.getElementById('quantity').value) || 1;
+    const quantity = parseInt(document.getElementById("quantity").value) || 1;
     const existingItem = cart.find(item => item.id === currentProduct._id);
 
     if (existingItem) {
-      existingItem.quantity = (existingItem.quantity || 1) + quantity;
+      existingItem.quantity += quantity;
     } else {
       cart.push({
         id: currentProduct._id,
         name: currentProduct.name,
-        price: currentProduct.price?.$numberDecimal ? parseFloat(currentProduct.price.$numberDecimal) : parseFloat(currentProduct.price),
-        image: currentProduct.images?.mainImage?.url || 'assets/images/default-product.png',
-        quantity: quantity
+        price: parseFloat(currentProduct.price?.$numberDecimal || currentProduct.price),
+        image: currentProduct.images?.mainImage?.url || "assets/images/default-product.png",
+        quantity,
       });
     }
 
-    localStorage.setItem('cart', JSON.stringify(cart));
+    localStorage.setItem("cart", JSON.stringify(cart));
     updateCartCount();
-    showCartFeedback('Added to cart!');
-
-    // Animate button
-    gsap.to(addToCartBtn, {
-      scale: 0.95,
-      duration: 0.1,
-      yoyo: true,
-      repeat: 1
-    });
+    showCartFeedback("Added to cart!");
+    gsap.to(addToCartBtn, { scale: 0.95, duration: 0.1, yoyo: true, repeat: 1 });
   };
 
-  // Fetch related products
+  // Fetch Related Products
   const fetchRelatedProducts = async (categoryId) => {
     if (!categoryId) return;
-
     try {
       const response = await fetch(`/api/products?category=${categoryId}&limit=4`);
       const data = await response.json();
-
-      if (data.success && data.data.length > 0) {
-        populateRelatedProducts(data.data);
-      }
+      if (data.success && data.data.length > 0) populateRelatedProducts(data.data);
     } catch (error) {
-      console.error('Error fetching related products:', error);
+      console.error("Error fetching related products:", error);
     }
   };
 
-  // Populate related products
   const populateRelatedProducts = (products) => {
-    relatedProducts.innerHTML = '';
+    relatedProducts.innerHTML = "";
 
-    // Filter out current product
-    const filteredProducts = products.filter(p => p._id !== productId);
+    const filtered = products.filter(p => p._id !== productId);
+    if (filtered.length === 0) return (relatedProducts.innerHTML = "<p>No related products found.</p>");
 
-    if (filteredProducts.length === 0) {
-      relatedProducts.innerHTML = '<p>No related products found.</p>';
-      return;
-    }
+    relatedProducts.innerHTML = filtered
+      .map(
+        p => `
+      <div class="product-card">
+        <img src="${p.images?.mainImage?.url}" alt="${p.name}" class="product-card-img">
+        <h4>${p.name}</h4>
+        <p>${formatCurrency(p.price)}</p>
+        <a href="/product?id=${p._id}" class="btn btn-primary">
+          <i class="fas fa-eye"></i> View
+        </a>
+      </div>`
+      )
+      .join("");
 
-    filteredProducts.forEach(product => {
-      const productCard = document.createElement('div');
-      productCard.className = 'product-card';
-
-      const price = product.price?.$numberDecimal ? parseFloat(product.price.$numberDecimal) : parseFloat(product.price);
-
-      productCard.innerHTML = `
-                        <img src="${product.images?.mainImage?.url}" 
-                             alt="${product.name}" class="product-card-img">
-                        <h4>${product.name}</h4>
-                        <p>${formatCurrency(price)}</p>
-                        <a href="/product?id=${product._id}" class="btn btn-primary"><i class="fas fa-eye"></i> View</a>
-                    `;
-
-      relatedProducts.appendChild(productCard);
-    });
-
-    // Animate related products
-    gsap.from(".product-card", {
-      opacity: 0,
-      y: 50,
-      duration: 0.8,
-      stagger: 0.2,
-      scrollTrigger: {
-        trigger: ".related-products",
-        start: "top 80%",
-        toggleActions: "play none none none"
-      }
-    });
+    gsap.from(".product-card", { opacity: 0, y: 50, duration: 0.8, stagger: 0.2 });
   };
 
-  // Tab switching
-  const tabItems = document.querySelectorAll(".tab-item");
-  const tabPanes = document.querySelectorAll(".tab-pane");
-
-  tabItems.forEach(item => {
+  // Tabs
+  document.querySelectorAll(".tab-item").forEach(item => {
     item.addEventListener("click", () => {
-      // Remove active class from all tabs and panes
-      tabItems.forEach(tab => tab.classList.remove("active"));
-      tabPanes.forEach(pane => pane.classList.remove("active"));
-
-      // Add active class to clicked tab and corresponding pane
+      document.querySelectorAll(".tab-item, .tab-pane").forEach(el => el.classList.remove("active"));
       item.classList.add("active");
-      const tabId = item.getAttribute("data-tab");
-      const activePane = document.getElementById(tabId);
-      activePane.classList.add("active");
-
-      // Animate tab content
-      gsap.from(activePane, {
-        opacity: 0,
-        y: 20,
-        duration: 0.5
-      });
+      const pane = document.getElementById(item.getAttribute("data-tab"));
+      pane.classList.add("active");
+      gsap.from(pane, { opacity: 0, y: 20, duration: 0.5 });
     });
   });
 
-  // Initialize
+  // Init
   updateCartCount();
   fetchProductData();
-
-  // Animate product details on scroll
-  gsap.from(".product-details", {
-    opacity: 0,
-    y: 50,
-    duration: 1,
-    scrollTrigger: {
-      trigger: ".product-details",
-      start: "top 80%",
-      toggleActions: "play none none none"
-    }
-  });
 });
-
