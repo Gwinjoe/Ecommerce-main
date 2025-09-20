@@ -428,7 +428,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById('filter-status').addEventListener('change', filterWishlist);
 
   // Initialize
-  updateCartCount();
+  // updateCartCount();
   fetchWishlist();
 });
 

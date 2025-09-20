@@ -101,8 +101,7 @@ exports.get_pending_user_orders_count = async (req, res) => {
   }
 }
 
-exports.add_order = async (req, res) => {
-  const { orderId, items, customer, totalPrice, payment, coupon } = req.body;
+exports.add_order = async ({ customer, items, coupon, totals }) => {
   try {
     console.log(orderId, items, customer);
     let { userId, address, postalCode, phone, country, city, email, name, state } = customer;

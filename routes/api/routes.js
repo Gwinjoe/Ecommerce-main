@@ -172,4 +172,13 @@ router.get("/chats_thread", getChatsThread);
 router.get("/admin_chats_thread", getAdminChatsThread)
 router.get("/chats", getChats)
 router.get("/delete_all_chats", deleteAllChats);
+
+const createOrderRouter = require('./createOrder');
+const verifyPaymentRouter = require('./verifyPayment');
+const fwWebhookRouter = require('./flutterwaveWebhook');
+
+router.use('/create_order', createOrderRouter);
+router.use('/verify_payment', verifyPaymentRouter);
+router.use('/flutterwave_webhook', fwWebhookRouter);
+
 module.exports = router;

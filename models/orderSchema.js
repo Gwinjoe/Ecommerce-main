@@ -1,39 +1,50 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
-const orderSchema = mongoose.Schema({
+const productSubSchema = new mongoose.Schema({
+  product: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Product',
+    required: true,
+  },
+  quantity: {
+    type: Number,
+    required: true,
+    default: 1,
+  },
+  // store per-line total as Decimal128 (calculated server-side when creating/updating orders)
+  totalPrice: {
+    type: mongoose.Types.Decimal128,
+    required: true,
+    default: mongoose.Types.Decimal128.fromString('0')
+  }
+});
+
+const orderSchema = new mongoose.Schema({
+  tx_ref: { // transaction reference associated with this order (generated server-side or client-side)
+    type: String,
+    index: true,
+    unique: true,
+    sparse: true
+  },
   status: {
     type: String,
     required: true,
-    default: "pending"
+    default: 'pending'
   },
-  products: [{
-    product: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Product",
-      required: true,
-    },
-    quantity: {
-      type: Number,
-      required: true,
-      default: 1,
-    },
-    totalPrice: {
-      type: mongoose.Types.Decimal128,
-      default: function() {
-        return this.product.price.$numberDecimal * this.quantity
-      }
-    }
-  }],
+  products: [productSubSchema],
   customer: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
+    ref: 'User',
     required: true,
   },
   coupon: {
     type: String,
   },
+  // store total as Decimal128
   totalPrice: {
     type: mongoose.Types.Decimal128,
+    required: true,
+    default: mongoose.Types.Decimal128.fromString('0'),
   },
   payment: {
     reference: String,
@@ -43,9 +54,13 @@ const orderSchema = mongoose.Schema({
   paymentMethod: {
     type: String,
   }
-
 }, {
   timestamps: true,
-})
+});
 
-module.exports = mongoose.model("Order", orderSchema);
+// helper to get JS Number from Decimal128
+orderSchema.methods.getTotalAsNumber = function() {
+  return parseFloat(this.totalPrice ? this.totalPrice.toString() : '0');
+}
+
+module.exports = mongoose.model('Order', orderSchema);
